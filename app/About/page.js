@@ -2,7 +2,7 @@ import React from 'react';
 
 const About = () => {
   return (
-    <div className="min-h-screen bg-gray-100 py-10 bg-background">
+    <div className="min-h-screen bg-gray-100 py-10 bg-">
       <div className="container mx-auto px-6 lg:px-20">
         <h1 className="text-4xl font-extrabold text-center text-white mb-8">About Code of War</h1>
 

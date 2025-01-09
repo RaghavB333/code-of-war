@@ -17,7 +17,7 @@ export default function Home() {
 
      
         {/* Features Section */}
-        <section id="features" className=" py-16 px-6 bg-[#0a0a0a] text-foreground">
+        <section id="features" className=" py-16 px-6 bg-C text-foreground">
           <div className="max-w-7xl mx-auto text-center">
             <h2 className="text-3xl font-semibold mb-6">Key Features</h2>
             <div className="grid md:grid-cols-3 gap-8">
