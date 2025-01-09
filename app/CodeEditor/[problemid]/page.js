@@ -1,7 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // Use next/navigation
 import axios from "axios";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -21,9 +20,16 @@ const CodeEditorPage = ({ params }) => {
   const [problemTitle, setproblemTitle] = useState("");
   const [results, setResults] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
-  const router = useRouter();
+  const path = window.location.pathname; // "/CodeEditor/677f24a23b2204e0fff07bf2"
 
-  const problemId = params.problemId; // Assuming problemId is passed as part of the route params
+  // Split the path by "/" and get the last segment
+  const problemId = path.split('/').pop();
+
+
+
+
+
+
 
   // Fetch problem data based on the problemId
   useEffect(() => {
