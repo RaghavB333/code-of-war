@@ -13,7 +13,7 @@ const ProblemsPage = () => {
     fetch("/api/problems")
       .then((response) => response.json())
       .then((data) => setProblems(data))
-      .catch((error) => console.error("Error fetching problems:", error));
+      .catch((error) => console.error("Error fetching problem:", error.response ? error.response.data : error.message));
   }, []);
 
   const handleProblemClick = (problemId) => {

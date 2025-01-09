@@ -1,23 +1,24 @@
-import clientPromise from "@/lib/mongodb";
+import Problem from "@/models/problems";
+import connectDB from "@/lib/mongoose";
 
 export async function GET(req) {
   try {
-    const client = await clientPromise;
-    const db = client.db("codeofwar");
-    
-    // Fetch all problems from the database
-    const problems = await db.collection("problems").find().toArray();
-    console.log("Problems fetched from database:", problems);  // Debugging log
+    // Connect to MongoDB
+    await connectDB();
 
-    
+    // Fetch all problems from the collection
+    const problems = await Problem.find(); // This returns an array of all problems
+
+    // Respond with the fetched problems
     return new Response(JSON.stringify(problems), {
       status: 200,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error("Error fetching problems:", error);
     return new Response(JSON.stringify({ error: "Failed to fetch problems" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
   }
 }
