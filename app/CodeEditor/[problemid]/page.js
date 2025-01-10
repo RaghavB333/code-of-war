@@ -17,21 +17,21 @@ const CodeEditorPage = ({ params }) => {
   const [code, setCode] = useState("// Write your code here...");
   const [language, setLanguage] = useState("");
   const [testCases, setTestCases] = useState([]);
-  const [problemTitle, setproblemTitle] = useState("");
+  const [problemTitle, setProblemTitle] = useState("");
   const [results, setResults] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
-  const path = window.location.pathname; // "/CodeEditor/677f24a23b2204e0fff07bf2"
 
-  // Split the path by "/" and get the last segment
-  const problemId = path.split('/').pop();
+  const [problemId, setProblemId] = useState("");
 
+  // Fetch problemId from the URL
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const id = window.location.pathname.split("/").pop();
+      setProblemId(id);
+    }
+  }, []);
 
-
-
-
-
-
-  // Fetch problem data based on the problemId
+  // Fetch problem data when problemId is set
   useEffect(() => {
     if (!problemId) return;
 
@@ -39,13 +39,29 @@ const CodeEditorPage = ({ params }) => {
       try {
         const response = await axios.get(`/api/problems/${problemId}`);
         const problem = response.data;
-        console.log("Problem data:", problem);
 
-        // Set problem data
-        setTestCases(problem.testCases || []);
-        setproblemTitle(problem.title || "");
+        // Log fetched data for debugging
+        console.log("Fetched problem:", problem);
+
+        // Check if problem.testCases exists and has the expected structure
+        if (problem.testCases) {
+          console.log("Test cases:", problem.testCases);
+
+          // Transform test case input based on the format (array or string)
+          const transformedTestCases = problem.testCases.map((testCase) => ({
+            input: Array.isArray(testCase.input)
+              ? testCase.input.join(" ")  // If input is an array, join as space-separated string
+              : testCase.input || "",    // If input is a string, leave it as is
+            expectedOutput: testCase.expectedOutput || "",
+          }));
+
+          // Log transformed test cases
+          console.log("Transformed test cases:", transformedTestCases);
+          setTestCases(transformedTestCases);
+        }
+        setProblemTitle(problem.title || "");
       } catch (error) {
-        console.error("Error fetching problem:", error);
+        console.error("Error fetching problem:", error.response?.data || error.message);
       }
     };
 
@@ -58,7 +74,7 @@ const CodeEditorPage = ({ params }) => {
   // Handle changes in test cases
   const handleTestCaseChange = (index, field, value) => {
     const updatedTestCases = [...testCases];
-    updatedTestCases[index][field] = value;
+    updatedTestCases[index][field] = value; // Space-separated string input
     setTestCases(updatedTestCases);
   };
 
@@ -76,13 +92,17 @@ const CodeEditorPage = ({ params }) => {
 
     for (const testCase of testCases) {
       const { input, expectedOutput } = testCase;
+
+      // Convert the space-separated input string into an array of integers (if necessary)
+      const inputArray = input.split(" ").map(Number).filter((num) => !isNaN(num));  // Convert string to array of integers
+
       try {
         const response = await axios.post(
           "https://judge0-ce.p.rapidapi.com/submissions",
           {
             source_code: code,
             language_id: languageMap[language],
-            stdin: input, // Add input if needed
+            stdin: inputArray.join(" "), // Send as space-separated string
           },
           {
             headers: {
@@ -94,7 +114,8 @@ const CodeEditorPage = ({ params }) => {
         );
 
         const { token } = response.data;
-        // Wait for the result using `await`
+
+        // Wait for the result using the token
         const result = await axios.get(
           `https://judge0-ce.p.rapidapi.com/submissions/${token}`,
           {
@@ -110,8 +131,10 @@ const CodeEditorPage = ({ params }) => {
           input,
           expectedOutput,
           actualOutput,
-          passed: actualOutput === expectedOutput,
+          passed: actualOutput == expectedOutput,
         });
+
+        if (!results[results.length - 1].passed) break; // Stop if a test fails
       } catch (error) {
         results.push({
           input,
@@ -119,6 +142,7 @@ const CodeEditorPage = ({ params }) => {
           actualOutput: "Error during execution",
           passed: false,
         });
+        break;
       }
     }
 
@@ -126,13 +150,19 @@ const CodeEditorPage = ({ params }) => {
     setIsRunning(false);
   };
 
+  // Calculate passed test cases
+  const passedCount = results.filter((result) => result.passed).length;
+  const firstFailedTest = results.find((result) => !result.passed);
+
   return (
     <div>
       <h1>Code Editor - {problemTitle}</h1>
-      <select className="bg-[#0a0a0a]" onChange={handleLanguageChange} value={language}>
-        <option value="" disabled>
-          Select your language
-        </option>
+      <select onChange={handleLanguageChange} value={language} className="text-black">
+        {!language && (
+          <option value="" disabled>
+            Select your language
+          </option>
+        )}
         {supportedLanguages.map((lang) => (
           <option key={lang} value={lang}>
             {lang.toUpperCase()}
@@ -148,17 +178,18 @@ const CodeEditorPage = ({ params }) => {
           options={{ fontSize: 16, minimap: { enabled: false } }}
         />
       )}
-      <div className="container m-2 border-2 p-4 border-white w-[98vw]">
-        <h2 className="ml-9">Test Cases</h2>
+
+      <div>
+        <h2>Test Cases</h2>
         {testCases.map((testCase, index) => (
           <div key={index} style={{ marginBottom: "10px" }}>
             <textarea
-              placeholder="Input"
+              placeholder="Input (Space-separated values)"
               value={testCase.input}
               onChange={(e) => handleTestCaseChange(index, "input", e.target.value)}
               rows="3"
               cols="30"
-              className="text-black mx-10"
+              className="text-black"
             />
             <textarea
               placeholder="Expected Output"
@@ -178,15 +209,17 @@ const CodeEditorPage = ({ params }) => {
       {results.length > 0 && (
         <div>
           <h2>Results</h2>
-          {results.map((result, index) => (
-            <div key={index}>
-              <p>Test Case {index + 1}</p>
-              <p>Input: {result.input}</p>
-              <p>Expected Output: {result.expectedOutput}</p>
-              <p>Actual Output: {result.actualOutput}</p>
-              <p>Status: {result.passed ? "✅ Passed" : "❌ Failed"}</p>
+          {firstFailedTest ? (
+            <div>
+              <h3>Test Case Failed</h3>
+              <p>Input: {firstFailedTest.input}</p>
+              <p>Expected Output: {firstFailedTest.expectedOutput}</p>
+              <p>Actual Output: {firstFailedTest.actualOutput}</p>
             </div>
-          ))}
+          ) : (
+            <h3>All Test Cases Passed</h3>
+          )}
+          <p>Test Cases Passed: {passedCount}</p>
         </div>
       )}
     </div>
