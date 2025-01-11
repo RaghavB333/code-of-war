@@ -27,8 +27,20 @@ export async function GET(req, { params }) {
       );
     }
 
+    // Ensure that problem data is structured as expected
+    const formattedProblem = {
+      problemId: problem.problemId,
+      title: problem.title,
+      description: problem.description,
+      difficulty: problem.difficulty,
+      functionSignature: problem.functionSignature,
+      predefinedCode: problem.predefinedCode,
+      examples: problem.examples,
+      testCases: problem.testCases,
+    };
+
     // Return the problem data as JSON
-    return new Response(JSON.stringify(problem), {
+    return new Response(JSON.stringify(formattedProblem), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
