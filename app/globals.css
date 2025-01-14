@@ -14,6 +14,15 @@
   }
 }
 
+/* globals.css */
+.gradient-text {
+  background-image: linear-gradient(to bottom, #FF1CF7, #b249f8); /* Replace with desired purple shades */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; /* Ensures the text fill is transparent for the gradient */
+  background-clip: text; /* Fallback for other browsers */
+}
+
+
 body {
   @apply font-sans;
   color: var(--foreground);

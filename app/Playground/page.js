@@ -25,9 +25,12 @@ const Playground = () => {
   };
 
   const getFriends = async()=>{
-    const response = await axios.post('/api/getfriends',{email: user.email});
-    const data = response.data;
-    setFriends(data.friends);
+    if(user && user.email)
+    {
+      const response = await axios.post('/api/getfriends',{email: user.email});
+      const data = response.data;
+      setFriends(data.friends);
+    }
 
   }
 

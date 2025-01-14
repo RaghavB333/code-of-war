@@ -7,7 +7,7 @@ export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <nav className="bg-gradient-to-r from-blue-200 via-pink-300 to-purple-500 text-white shadow-lg">
+        <nav className="bg-[#0a0a0a]  text-white shadow-lg">
             <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                 {/* Logo / Brand */}
                 <div className="text-2xl font-bold">
@@ -41,9 +41,7 @@ export default function Navbar() {
                     <Link href="/leaderboard" className="hover:text-yellow-400">
                         Leaderboard
                     </Link>
-                    <Link href="/About" className="hover:text-yellow-400">
-                        About
-                    </Link>
+                    
                 </div>
 
                 {/* Mobile Hamburger Icon */}
