@@ -1,23 +1,31 @@
-const userModel = require('../models/user.model');
+const userModel = require('@/models/user.model');
 const userService = require('../services/user.service');
 const {validationResult} = require('express-validator');
-const blacklistTokenModel = require('../models/blacklistToken.model');
+const blacklistTokenModel = require('@/models/blacklistToken.model');
+import mongoBD from '@/lib/mongoose';
 
 module.exports.registerUser = async(req,res,next) =>{
+
+    await mongoBD();
     const errors = validationResult(req);
     if(!errors.isEmpty())
     {
         return res.status(400).json({errors: errors.array()});
     }
 
-    const {username,email,password} = req.body;
-    console.log(username,email,password);
+    const {username,email,password,confirmPassword} = req.body;
+    console.log(username,email,password,confirmPassword);
 
     const isuser = await userModel.findOne({email});
 
     if(isuser)
     {
         return res.status(400).json({message: 'User already exists'});
+    }
+
+    if(password == confirmPassword)
+    {
+        return res.status(400).json({message: 'Passwords do not match'});
     }
 
     const hashPassword = await userModel.hashPassword(password);

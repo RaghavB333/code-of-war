@@ -10,14 +10,24 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
+    "@nextui-org/alert": "^2.2.9",
+    "@nextui-org/react": "^2.6.11",
     "axios": "^1.7.9",
+    "bcrypt": "^5.1.1",
     "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-validator": "^7.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.471.1",
     "monaco-editor": "^0.52.2",
     "mongodb": "^6.12.0",
-    "mongoose": "^8.9.3",
-    "next": "15.1.3",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "mongoose": "^8.9.4",
+    "next": "^15.1.3",
+    "nodemon": "^3.1.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

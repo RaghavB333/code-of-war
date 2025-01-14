@@ -18,12 +18,36 @@ const userSchema = new mongoose.Schema({
         required: true,
         select: false,       
     },
+    notifications:{
+        type: [
+            {
+              senderEmail: {
+                type: String,
+                default: '',
+              },
+              receiverEmail: {
+                type: String,
+                default: '',
+              },
+              status: {
+                type: String,
+                default: 'pending',
+              },
+              createdAt: {
+                type: Date,
+                default: Date.now,
+              },
+            },
+          ],
+          default: [],
+    },
     friends:{
         type: Array,
-        default: ["Add friends"],
+        default: [],
     },
     socketId:{
         type: String,
+        default: ''
     }
 });
 
@@ -39,6 +63,6 @@ userSchema.statics.hashPassword = async function (password) {
     return await bcrypt.hash(password,10);
 }
 
-const userModel = mongoose.model('user', userSchema);
+const userModel = mongoose.models.userModel || mongoose.model('userModel', userSchema);
 
 module.exports = userModel;

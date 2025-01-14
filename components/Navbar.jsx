@@ -20,11 +20,23 @@ export default function Navbar() {
 
                 {/* Desktop Menu */}
                 <div className="hidden md:flex space-x-6">
+                    <Link href="/Signup" className="hover:text-yellow-400">
+                        Signup
+                    </Link>
+                    <Link href="/Login" className="hover:text-yellow-400">
+                        Login
+                    </Link>
                     <Link href="/tournaments" className="hover:text-yellow-400">
                         Tournaments
                     </Link>
+                    <Link href="/Playground" className="hover:text-yellow-400">
+                        Playground
+                    </Link>
                     <Link href="/problems" className="hover:text-yellow-400">
                         Problems
+                    </Link>
+                    <Link href="/Dashboard" className="hover:text-yellow-400">
+                        Dashboard
                     </Link>
                     <Link href="/leaderboard" className="hover:text-yellow-400">
                         Leaderboard

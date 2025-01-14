@@ -5,8 +5,8 @@ import Problem from "@/models/problems";
 export async function GET(req, { params }) {
   // Connect to the database
   await connectDB();
-
-  const { id } = params; // Extract `id` from `params`
+  const { id } = await params; // Extract `id` from `params`
+  console.log(id); 
 
   // Check if the `id` is a valid MongoDB ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) {
