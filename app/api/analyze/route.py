@@ -14,7 +14,7 @@ def analyze_memory_growth(code):
         exec(code, {"input_size": input_size})
 
     memory_results = []
-    for input_size in range(1, 101, 10):  
+    for input_size in range(1, 51, 5):  
         try:
             memory_usage_at_size = memory_usage((memory_function_with_input, (input_size,)), max_usage=True)
             if isinstance(memory_usage_at_size, list):

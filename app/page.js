@@ -5,12 +5,18 @@ import Image from "next/image";
 import { io } from "socket.io-client";
 import { React, useEffect, useState, useContext,useRef } from "react";
 import { UserDataContext } from '@/context/UserContext';
+import { LobbyDataContext } from '@/context/LobbyContext';
 import { useRouter } from 'next/navigation';
 import localFont from "next/font/local";
 import { motion } from "framer-motion";
 import axios from "axios";
+import AcceptInvite from "@/components/AcceptInvite";
 
-const socket = io("http://localhost:4000");
+// const socket = io("http://localhost:4000");
+
+
+
+
 
 const customFont = localFont({
   src: "../public/fonts/GODOFWAR.ttf",
@@ -21,24 +27,30 @@ const customFont = localFont({
 
 
 export default function Home() {
-  const [receivedRequest, setReceivedRequest] = useState(null);
-  const [notifications, setNotificatins] = useState("");
   const [showMore, setShowMore] = useState(false);
 
   const handleLearnMore = () => {
     setShowMore(true);
   };
 
- 
+  
+  
+  
+  
   const socketid = useRef(null);
-
+  
   const {user, setUser} = useContext(UserDataContext);
-  const router = useRouter();
-
+  const {socket,setSocket } = useContext(LobbyDataContext);
+  const router = useRouter(); 
+  
   const token = localStorage.getItem('token');
+  
+  // useEffect(() => {
+  //   setSocket(socket);
+  // }, [])
 
   const storesocketid = async()=>{
-    const email = user.email
+    const email = user.email;
     console.log(email,socketid.current);
     const data = {
       socketid:socketid.current,
@@ -48,41 +60,101 @@ export default function Home() {
     console.log(response.data);
   }
   
-    useEffect(() => {
+    useEffect(() => {  
       if(user && user.email && socketid.current != null)
       {
         storesocketid();
       }
     }, [user && user.email]);
+
+
+
+    useEffect(() => {
+      if(socket != null)
+      {
+
+        const registerUser = () => {
+          if (user && user.email) {
+            console.log("Registering user:", user.email);
+            socket.emit("register-user", { email: user.email });
+          }
+        };
+        
+        socket.on('connect', () => {
+        console.log('Connected to server with socket ID:', socket.id);
+        socketid.current = socket.id;
+        registerUser(); // register on first connect
+      });
+      
+      // Register again if the socket reconnects
+      socket.on('reconnect', () => {
+        console.log("Reconnected:", socket.id);
+        registerUser();
+      });
+      
+      return () => {
+        socket.off("connect");
+        socket.off("reconnect");
+      };
+    }
+    }, [user,socket]);
+
+    
+    useEffect(() => {
+      if(socket != null)
+      {
+
+        const handleInvite = (data) => {
+          console.log("received invite", data);
+          if (confirm(`${data.inviterEmail} invited you to a lobby`)) {
+            socket.emit('accept-invite', { 
+              lobbyId: data.lobbyId, 
+              email: user.email 
+            }, (response) => {
+              if (response.success) {
+                router.push(`/lobby/${response.lobbyId}`);
+              }
+            });
+          }
+        };
+        
+        socket.on('receive-invite', handleInvite);
+        return () => socket.off('receive-invite', handleInvite);
+      }
+      }, [socket, user && user.email, router]);
+    
     
 
 
+  // useEffect(() => {
+  //   // Listen for incoming requests
+  //   // socket.on("receive-request", async(data) => {
+  //   //   console.log("user",data);
+  //   //   if(confirm(`${data.from} has Invite you`))
+  //   //   {
+  //   //     console.log("yes");
+  //   //     const response = await axios.post('/api/acceptinvite', {member:[data.from,data.friendemail],id:data.id});
+  //   //     console.log("response",response.data);
+  //   //     if(response.status === 200)
+  //   //     {
+  //   //       socket.emit("accept-invite", data);
+  //   //       router.push(`/Playground/${data.id}`)
+  //   //     }
+  //   //   }
+  //   //   else
+  //   //   {
+  //   //     console.log("NO");
+  //   //   }
+  //   // })
+
+  //   // return () => {
+  //   //   socket.off("receive-request");
+  //   // };
+  // }, []);
+
+
   useEffect(() => {
-      socket.on('connect', async() => {
-        console.log('Connected to server:', socket.id);
-        // setSocketid(socket.id);
-        socketid.current = socket.id;
-  
-      });
-
-
-    // Listen for incoming requests
-    socket.on("receive-request", (data) => {
-      setReceivedRequest(data);
-      confirm("You have a new request");
-      setNotificatins(data);
-      console.log(data);
-      console.log(receivedRequest);
-    })
-
-    return () => {
-      socket.off("receive-request");
-    };
-  }, []);
-
-
-  useEffect(() => {
-    if(!token){
+    if(token == null || token == undefined || token == ""){
       console.log("token is not exist")
   }
   else{
@@ -101,6 +173,7 @@ export default function Home() {
   
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* <AcceptInvite/> */}
       <main>
         {/* Hero Section */}
         <motion.section
