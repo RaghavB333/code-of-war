@@ -56,53 +56,41 @@ process.stdin.on("data", (data) => {
   if (language === "java") {
     return `
 import java.util.*;
-import org.json.*;
 
 public class Main {
-    public static Object main(Object[] args) {
-        // User's code
-        ${userCode}
-    }
+    ${userCode}
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        String input = scanner.useDelimiter("\\A").next();
-        JSONObject inputs = new JSONObject(input);
-        JSONArray keys = inputs.names();
+        int a = scanner.nextInt();
+        int b = scanner.nextInt();
 
-        Object[] args = new Object[keys.length()];
-        for (int i = 0; i < keys.length(); i++) {
-            args[i] = inputs.get(keys.getString(i));
-        }
-
-        Object result = main(args);
-        System.out.println(result);  // Automatically handles print without user needing to write it.
+        int result = sumTwoNumbers(a, b);
+        System.out.println(result);
     }
 }
+
+
     `;
   }
 
   if (language === "cpp") {
     return `
 #include <iostream>
-#include <string>
-#include <sstream>
-#include <nlohmann/json.hpp>
 using namespace std;
-using json = nlohmann::json;
 
-// User's function
+// User's function here
 ${userCode}
 
 int main() {
-    string input;
-    getline(cin, input);
-    json j = json::parse(input);
+    int a, b;
+    cin >> a >> b;
 
-    auto result = main(j["a"], j["b"]);  // Assuming two inputs as an example
-    cout << result << endl;  // Automatically handles print without user needing to write it.
+    int result = sumTwoNumbers(a, b);
+    cout << result << endl;
     return 0;
 }
+
     `;
   }
 
@@ -163,7 +151,7 @@ const CodeEditorPage = ({ params }) => {
   }, [problemId]);
 
   const [analysisResults, setAnalysisResults] = useState(null);
-  
+
 
   const analyzeCode = async () => {
     if (!code) {
@@ -214,15 +202,26 @@ const CodeEditorPage = ({ params }) => {
         // Get Judge0 URI from environment variable
         const judge0URI = process.env.Judge0_URI || 'http://localhost:2358/';
 
-        // Send the request to Judge0
+        const formatInputForLanguage = (language, inputs) => {
+          if (language === "cpp" || language === "java") {
+            return Object.values(inputs).join(" "); // "1 2"
+          }
+        
+          return JSON.stringify(inputs); // for python, js
+        };
+
+        // Usage:
+        const stdin = formatInputForLanguage(language, testCase.inputs);
+
         const response = await axios.post(
           `${judge0URI}submissions`,
           {
             source_code: wrappedCode,
             language_id: languageMap[language],
-            stdin: JSON.stringify(testCase.inputs),
+            stdin: stdin,
           }
         );
+
 
         const { token } = response.data;
         // console.log("Judge0 Token:", token);  // Log the token to see if it's being generated
@@ -289,7 +288,7 @@ const CodeEditorPage = ({ params }) => {
     setIsRunning(false);
   };
 
-  
+
   const submitSolution = async () => {
     console.log("user email ", user.email);
     if (results) {
