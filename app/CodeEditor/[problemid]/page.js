@@ -19,82 +19,87 @@ const languageMap = {
 
 
 
-const wrapCode = (language, userCode) => {
-  if (language === "python") {
-    return `
-import json
+// const wrapCode = (language, userCode) => {
+//   if (language === "python") {
+//     return `
+// import json
 
-def sum_two_numbers(a: int, b: int) -> int:
-    return a + b  # User-defined function
+// ${userCode}
 
-def main(**inputs):
-    # User's code
-    result = sum_two_numbers(**inputs)  # Call the user's function and return result
-    return result
+// def main(**inputs):
+//     result = sum_two_numbers(**inputs)  # Call the user's function and return result
+//     return result
 
-if __name__ == "__main__":
-    import sys
-    input_data = sys.stdin.read()
-    inputs = json.loads(input_data)
-    result = main(**inputs)
-    print(result)  # This will automatically print the result
-    `;
-  }
+// if __name__ == "__main__":
+//     import sys
+//     input_data = sys.stdin.read()
+//     inputs = json.loads(input_data)
+//     result = main(**inputs)
+//     print(result)  # This will automatically print the result
+//     `;
+//   }
 
-  if (language === "javascript") {
-    return `
-const main = ${userCode};
+//   if (language === "javascript") {
+//     return `
+// const main = ${userCode};
 
-process.stdin.on("data", (data) => {
-    const inputs = JSON.parse(data);
-    const result = main(...Object.values(inputs));
-    console.log(result);  // Automatically handles print without user needing to write it.
-});
-    `;
-  }
+// process.stdin.on("data", (data) => {
+//     const inputs = JSON.parse(data);
+//     const result = main(...Object.values(inputs));
+//     console.log(result);  // Automatically handles print without user needing to write it.
+// });
+//     `;
+//   }
 
-  if (language === "java") {
-    return `
-import java.util.*;
+//   if (language === "java") {
+//     return `
+// import java.util.*;
 
-public class Main {
-    ${userCode}
+// public class Main {
+//     ${userCode}
 
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        int a = scanner.nextInt();
-        int b = scanner.nextInt();
+//     public static void main(String[] args) {
+//         Scanner scanner = new Scanner(System.in);
+//         int a = scanner.nextInt();
+//         int b = scanner.nextInt();
 
-        int result = sumTwoNumbers(a, b);
-        System.out.println(result);
-    }
-}
+//         int result = sumTwoNumbers(a, b);
+//         System.out.println(result);
+//     }
+// }
 
 
-    `;
-  }
+//     `;
+//   }
 
-  if (language === "cpp") {
-    return `
-#include <iostream>
-using namespace std;
+//   if (language === "cpp") {
+//     return `
+// #include <iostream>
+// using namespace std;
 
-// User's function here
-${userCode}
+// // User's function here
+// ${userCode}
 
-int main() {
-    int a, b;
-    cin >> a >> b;
+// int main() {
+//     int a, b;
+//     cin >> a >> b;
 
-    int result = sumTwoNumbers(a, b);
-    cout << result << endl;
-    return 0;
-}
+//     int result = sumTwoNumbers(a, b);
+//     cout << result << endl;
+//     return 0;
+// }
 
-    `;
-  }
+//     `;
+//   }
 
-  return userCode;
+//   return userCode;
+// };
+
+
+const wrapCode = (language, userCode, languageWrappers) => {
+  const wrapper = languageWrappers[language];
+  if (!wrapper) return userCode;
+  return wrapper.replace("{code}", userCode);
 };
 
 const CodeEditorPage = ({ params }) => {
@@ -110,6 +115,9 @@ const CodeEditorPage = ({ params }) => {
   const [submissions, setSubmissions] = useState([]); // Added for submissions
   const [hasRunTests, setHasRunTests] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [languageWrappers, setlanguageWrappers] = useState([])
+  const [AnalysisCode, setAnalysisCode] = useState("")
+  const [analysisTC, setanalysisTC] = useState()
 
 
   const { user } = useContext(UserDataContext);
@@ -139,6 +147,7 @@ const CodeEditorPage = ({ params }) => {
         setExamples(problem.examples || []);
         setTestCases(problem.testCases || []);
         setproblemDesc(problem.description || "")
+        setlanguageWrappers(problem.languageWrappers)
         if (problem.predefinedCode) {
           setCode(problem.predefinedCode.python || "// Write your code here...");
         }
@@ -160,7 +169,9 @@ const CodeEditorPage = ({ params }) => {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/analyze", { code });
+      console.log(language)
+      const response = await axios.post("http://localhost:5000/analyze", { code:AnalysisCode , language:language});
+      console.log(response.data)
       setAnalysisResults(response.data); // Store results for visualization
     } catch (error) {
       console.error("Error analyzing code:", error);
@@ -196,22 +207,37 @@ const CodeEditorPage = ({ params }) => {
         console.log("Test Case Input:", testCase.inputs);
         console.log("Test Case Expected Output:", testCase.expectedOutput);
 
-        const wrappedCode = wrapCode(language, code);
+        const wrappedCode = wrapCode(language, code, languageWrappers);
         console.log("Wrapped Code:", wrappedCode);
+        setAnalysisCode(wrappedCode)
 
         // Get Judge0 URI from environment variable
         const judge0URI = process.env.Judge0_URI || 'http://localhost:2358/';
 
         const formatInputForLanguage = (language, inputs) => {
-          if (language === "cpp" || language === "java") {
-            return Object.values(inputs).join(" "); // "1 2"
+          // For Python and JavaScript, we send JSON-formatted input
+          if (language === "python" || language === "javascript") {
+            return JSON.stringify(inputs);
           }
-        
-          return JSON.stringify(inputs); // for python, js
+
+          // For C++ and Java, we flatten the values (supporting nested arrays)
+          const flattenInput = (value) => {
+            if (Array.isArray(value)) {
+              return value.map(flattenInput).join(" ");
+            } else if (typeof value === "object" && value !== null) {
+              return Object.values(value).map(flattenInput).join(" ");
+            } else {
+              return String(value);
+            }
+          };
+
+          return Object.values(inputs).map(flattenInput).join(" ");
         };
+
 
         // Usage:
         const stdin = formatInputForLanguage(language, testCase.inputs);
+        setanalysisTC(stdin[0])
 
         const response = await axios.post(
           `${judge0URI}submissions`,

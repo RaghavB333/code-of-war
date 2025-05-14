@@ -37,6 +37,7 @@ export async function GET(req, { params }) {
       predefinedCode: problem.predefinedCode,
       examples: problem.examples,
       testCases: problem.testCases,
+      languageWrappers:problem.languageWrappers,
     };
 
     // Return the problem data as JSON

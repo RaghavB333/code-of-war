@@ -8,10 +8,11 @@ const AnalysisChart = ({ data }) => {
   return (
     <div>
       <p>
-        <strong>Time Complexity:</strong> {data.time_complexity || "Unknown"} 
-        &nbsp;&nbsp;|&nbsp;&nbsp; 
-        <strong>Space Complexity:</strong> {data.space_complexity || "Not Determined"}
+        <strong>Time Complexity:</strong> {data.time || "Unknown"}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>Space Complexity:</strong> {data.memory || "Not Determined"}
       </p>
+      
     </div>
   );
 };

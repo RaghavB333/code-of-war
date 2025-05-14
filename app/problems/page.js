@@ -29,13 +29,26 @@ const ProblemsPage = () => {
     router.push(`/CodeEditor/${problemId}`);
   };
 
+  const getproblemDifficulty = (difficulty) =>{
+     switch (difficulty.toLowerCase()) {
+      case "easy":
+        return "Give Me Story";
+      case "medium":
+        return "Give Me Balanced";
+      case "hard":
+        return "Give Me Code Of War";
+      default:
+        return "";
+    }
+  }
+
   const getDifficultyColor = (difficulty) => {
     switch (difficulty.toLowerCase()) {
-      case "give me story":
+      case "easy":
         return "text-green-500";
-      case "give me balanced":
+      case "medium":
         return "text-orange-500";
-      case "give me no mercy":
+      case "hard":
         return "text-red-500";
       default:
         return "text-gray-500";
@@ -62,7 +75,7 @@ const ProblemsPage = () => {
                 >
                   {problem.title}
                   <span className={`relative right-0 ${getDifficultyColor(problem.difficulty)}`}>
-                    {problem.difficulty}
+                    {getproblemDifficulty(problem.difficulty)}
                   </span>
                 </button>
               </li>
