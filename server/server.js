@@ -300,7 +300,7 @@ io.on('connection', async (socket) => {
   });
 
   // Invite handler
-  socket.on('send-invite', async ({ lobbyId, friendEmail,friendSocketId, inviterEmail }) => {
+  socket.on('send-invite', async ({ lobbyId, friendEmail,friendSocketId, inviterEmail}) => {
     console.log("invite received");
     try {
       // const friend = await UserSocket.findOne({ email: friendEmail });
@@ -345,11 +345,11 @@ io.on('connection', async (socket) => {
   });
 
   // Start lobby handler (host only)
-  socket.on('start-lobby', async ({ lobbyId, email }) => {
+  socket.on('start-lobby', async ({ lobbyId, email,difficulty,no }) => {
     const lobby = await Playground.findOne({ id: lobbyId });
     if (lobby && lobby.owner === email) {
       io.to(lobbyId).emit('lobby-started', { 
-        redirectTo: `/problems/${lobbyId}` 
+        redirectTo: `/problems/${lobbyId}?difficulty=${difficulty}&no=${no}`, 
       });
     }
   });

@@ -157,7 +157,7 @@
 
 
 "use client";
-import { useParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter,useParams } from 'next/navigation';
 import { useState, useEffect, useContext } from 'react';
 import { UserDataContext } from '@/context/UserContext';
 import { LobbyDataContext } from '@/context/LobbyContext';
@@ -173,6 +173,11 @@ export default function LobbyPage() {
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const usesearchParams = useSearchParams();
+
+  const difficulty = usesearchParams.get("difficulty");
+  const no = usesearchParams.get("no");
+  console.log(difficulty,no);
   const token = localStorage.getItem('token');
 
   useEffect(() => {
@@ -265,7 +270,7 @@ export default function LobbyPage() {
         friendEmail,
         friendSocketId,
         senderSokcketId: user.socketId,
-        inviterEmail: user.email
+        inviterEmail: user.email,
       });
     }
   };
@@ -273,7 +278,9 @@ export default function LobbyPage() {
   const startLobby = () => {
     socket.emit('start-lobby', {
       lobbyId,
-      email: user.email
+      email: user.email,
+      difficulty,
+      no
     });
   };
 

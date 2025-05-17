@@ -2,15 +2,22 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 const ProblemsPage = () => {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true); // New state for loading status
   const router = useRouter();
 
+  const searchParams = useSearchParams();
+  const difficulty = searchParams.get("difficulty");
+  const no = searchParams.get("no");
+
+  console.log("Difficulty:", difficulty, no);
+
   useEffect(() => {
     // Fetch problems from the API
-    fetch("/api/problems")
+    fetch(`/api/problems?difficulty=${difficulty}&no=${no}`)
       .then((response) => response.json())
       .then((data) => {
         setProblems(data);

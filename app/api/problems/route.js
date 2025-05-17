@@ -4,10 +4,33 @@ import connectDB from "@/lib/mongoose";
 export async function GET(req) {
   try {
     // Connect to MongoDB
+    const { searchParams } = new URL(req.url, `http://localhost:3000`);
+    console.log("searchParams",searchParams)
+    
+    const difficulty = searchParams.get('difficulty');
+    const no = parseInt(searchParams.get('no'));
+    console.log("Request URL:", difficulty,no);
     await connectDB();
 
+
+     let problems = [];
+     console.log(difficulty,no);
+    if(difficulty && no)
+    {
+      console.log("Difficulty:", difficulty,no);
+      const count = parseInt(no);
+  
+      const query = difficulty
+        ? { difficulty }
+        : {}; // if difficulty is not provided, return all
+        problems = await Problem.find(query).limit(count);
+    }
+    else{
+       problems = await Problem.find(); // This returns an array of all problems
+    }
+
+
     // Fetch all problems from the collection
-    const problems = await Problem.find(); // This returns an array of all problems
 
     // Respond with the fetched problems
     return new Response(JSON.stringify(problems), {

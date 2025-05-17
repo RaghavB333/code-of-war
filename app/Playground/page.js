@@ -166,10 +166,10 @@ export default function CreateLobby() {
   const isFormComplete = formData.problemCount && formData.difficulty && formData.timeLimit;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#0a0a0a] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-lg mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 py-8 px-6">
+        <div className="bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
+          <div className="bg-gray-900 py-8 px-6">
             <h1 className="text-3xl font-bold text-white text-center">Create Coding Battle</h1>
             <p className="text-blue-100 text-center mt-2">Set up your competitive coding session</p>
           </div>
@@ -209,7 +209,7 @@ export default function CreateLobby() {
             
             <form className="space-y-6">
               <div>
-                <label htmlFor="problemCount" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="problemCount" className="block text-sm font-medium text-white mb-1">
                   Number of Problems
                 </label>
                 <div className="relative">
@@ -218,7 +218,7 @@ export default function CreateLobby() {
                     name="problemCount"
                     value={formData.problemCount}
                     onChange={handleChange}
-                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    className="appearance-none bg-gray-700 text-white block w-full px-4 py-3 border border-black rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="" disabled hidden>Select problem count</option>
                     <option value="1">1 Problem</option>
@@ -236,7 +236,7 @@ export default function CreateLobby() {
               </div>
               
               <div>
-                <label htmlFor="difficulty" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="difficulty" className="block text-sm font-medium text-white mb-1">
                   Difficulty Level
                 </label>
                 <div className="relative">
@@ -245,12 +245,12 @@ export default function CreateLobby() {
                     name="difficulty"
                     value={formData.difficulty}
                     onChange={handleChange}
-                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    className="appearance-none block bg-gray-700 w-full px-4 py-3 border border-black rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
                   >
                     <option value="" disabled hidden>Select difficulty</option>
-                    <option value="Give me Story">Give me Story (Easy)</option>
-                    <option value="Give me Balance">Give me Balance (Medium)</option>
-                    <option value="Give me no Marcy">Give me no Mercy (Hard)</option>
+                    <option value="Give Me Story">Give me Story (Easy)</option>
+                    <option value="Give Me Balanced">Give me Balanced (Medium)</option>
+                    <option value="Give Me No Mercy">Give me no Mercy (Hard)</option>
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                     <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -261,7 +261,7 @@ export default function CreateLobby() {
               </div>
               
               <div>
-                <label htmlFor="timeLimit" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="timeLimit" className="block text-sm font-medium text-white mb-1">
                   Time Limit
                 </label>
                 <div className="relative">
@@ -270,7 +270,7 @@ export default function CreateLobby() {
                     name="timeLimit"
                     value={formData.timeLimit}
                     onChange={handleChange}
-                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    className="appearance-none block bg-gray-700 w-full px-4 py-3 border border-black rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
                   >
                     <option value="" disabled hidden>Select time limit</option>
                     <option value="30">30 Minutes</option>
@@ -289,7 +289,7 @@ export default function CreateLobby() {
             </form>
           </div>
           
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+          <div className="px-6 py-4 bg-gray-900">
             <button 
               onClick={handleCreateLobby}
               disabled={isLoading || !isFormComplete || socketStatus !== 'connected'}
