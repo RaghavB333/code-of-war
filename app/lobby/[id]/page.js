@@ -1,161 +1,3 @@
-// "use client";
-// import { useParams, useRouter } from 'next/navigation';
-// import { useState, useEffect,useContext } from 'react';
-// import { UserDataContext } from '@/context/UserContext';
-// import { LobbyDataContext } from '@/context/LobbyContext';
-// import { io } from "socket.io-client";
-// import axios from 'axios';
-
-
-
-// export default function LobbyPage() {
-//   const { id: lobbyId } = useParams();
-//   console.log(lobbyId);
-//   const router = useRouter();
-//   const { socket } = useContext(LobbyDataContext);
-//   const { user,setUser } = useContext(UserDataContext);
-//   console.log(user);
-//   const [lobby, setLobby] = useState(null);
-//   const [friends, setFriends] = useState([]);
-
-//   const token = localStorage.getItem('token');
-
-//   useEffect(() => {
-//     if(!token){
-//       console.log("token is not exist")
-//   }
-//   else{
-//     axios.post(`/api/profile`, {token
-//   }).then((response) => {
-//     if(response.status === 200){
-//         const data = response.data;
-//         console.log(data.data);
-//         setUser(data.user);
-//     }
-//   })
-//   }
-
-    
-//   }, [token])
-
-
-//   const getFriends = async () => {
-//     if (user && user.email) {
-//       const response = await axios.post("/api/getfriends", {
-//         email: user.email,
-//       });
-//       const data = response.data;
-//       setFriends(data.friends);
-//     }
-//   };
-
-//   useEffect(() => {
-//     getFriends();
-//   }, [user && user.email]);
-  
-
- 
-//   useEffect(() => {
-
-//     const getplaygroundmembers = async()=>{
-//       const response = await axios.get(`/api/createplayground?id=${lobbyId}`);
-//       const data = response.data;
-//       setLobby(data.lobby);
-//       console.log(response);
-//     }
-//     getplaygroundmembers();
-//   }, [lobbyId]);
-
-//   // Socket events
-//   useEffect(() => {
-//     socket.on('lobby-updated', (updatedLobby) => {
-//       setLobby(updatedLobby);
-//     });
-
-//     socket.on('lobby-started', ({ redirectTo }) => {
-//       router.push(redirectTo);
-//     });
-
-//     return () => {
-//       socket.off('lobby-updated');
-//       socket.off('lobby-started');
-//     };
-//   }, [socket, router]);
-
-//   const getfriendsocketid = async (email) => {
-//     const response = await axios.post("/api/getsocketid", { email });
-//     const friendsocketdata = await response.data;
-//     const friendsocketid = friendsocketdata.id;
-//     return friendsocketid;
-//     // console.log(response.data);
-//     // sendRequest(email);
-//   };
-
-//   const inviteFriend = async(friendEmail) => {
-//     const friendSocketId = await getfriendsocketid(friendEmail);
-//     console.log("friendSocketid",friendSocketId);
-//     socket.emit('send-invite', {
-//       lobbyId,
-//       friendEmail,
-//       friendSocketId,
-//       senderSokcketId: user.socketId,
-//       inviterEmail: user.email
-//     });
-//   };
-
-//   const startLobby = () => {
-//     socket.emit('start-lobby', {
-//       lobbyId,
-//       email: user.email
-//     });
-//   };
-
-//   if (!lobby) return <div>Loading...</div>;
-
-//   return (
-//     <div className="lobby-container">
-//       <h2>Lobby: {lobbyId}</h2>
-      
-//       <div className="members-section">
-//         <h3>Members</h3>
-//         <ul>
-//           {lobby.members.map((member,index) => (
-
-//             <li key={index}>
-//               {member} {member === user.email && '(You)'}
-//               {member === lobby.owner && ' (Host)'}
-//             </li>
-            
-//           ))}
-//         </ul>
-//       </div>
-
-//       <div>
-//         <h3>Invite Friends</h3>
-//         <ul>
-//           {friends
-//             .filter(friend => !lobby.members.includes(friend))
-//             .map((friend, index) => (
-//               <li key={index}>
-//                 {friend}
-//                 <button onClick={() => inviteFriend(friend)}>Invite</button>
-//               </li>
-//             ))}
-//         </ul>
-//       </div>
-
-//       {lobby.owner === user.email && (
-//         <div className="host-controls">
-//           <button onClick={startLobby} className="start-button">
-//             Start Coding Session
-//           </button>
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
-
 "use client";
 import { useSearchParams, useRouter,useParams } from 'next/navigation';
 import { useState, useEffect, useContext } from 'react';
@@ -166,6 +8,7 @@ import axios from 'axios';
 
 export default function LobbyPage() {
   const { id: lobbyId } = useParams();
+  console.log(lobbyId);
   const router = useRouter();
   const { socket } = useContext(LobbyDataContext);
   const { user, setUser } = useContext(UserDataContext);
@@ -253,6 +96,7 @@ export default function LobbyPage() {
 
   const getfriendsocketid = async (email) => {
     try {
+      console.log("Getting friend's socket ID for:", email);
       const response = await axios.post("/api/getsocketid", { email });
       const friendsocketdata = await response.data;
       return friendsocketdata.id;
@@ -263,6 +107,7 @@ export default function LobbyPage() {
   };
 
   const inviteFriend = async (friendEmail) => {
+    console.log("Inviting friend:", friendEmail);
     const friendSocketId = await getfriendsocketid(friendEmail);
     if (friendSocketId) {
       socket.emit('send-invite', {
@@ -345,12 +190,12 @@ export default function LobbyPage() {
                           </svg>
                         </div>
                         <div className="flex-1">
-                          <span className="font-medium text-white">{member}</span>
+                          <span className="font-medium text-white">{member.name}</span>
                           <div className="flex items-center gap-2 mt-1">
-                            {member === user?.email && (
+                            {member.name === user?.email && (
                               <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">You</span>
                             )}
-                            {member === lobby.owner && (
+                            {member.name === lobby.owner && (
                               <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full">Host</span>
                             )}
                           </div>

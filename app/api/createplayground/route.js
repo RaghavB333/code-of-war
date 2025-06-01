@@ -64,8 +64,17 @@ export async function GET(req, res) {
   const { searchParams } = new URL(req.url);
     const id = (searchParams.get('id'));
 
+    let lobby;
+    if(id.includes("@"))
+    {
+      lobby = await Playground.find({"members.name":id});
+      console.log(lobby);
+    }
+    else{
+      lobby = await Playground.findOne({id});
+    }
 
-    const lobby = await Playground.findOne({id});
+
 
     if(lobby)
     {

@@ -7,7 +7,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url, `http://localhost:3000`);
     console.log("searchParams",searchParams)
     
-    const difficulty = searchParams.get('difficulty');
+    let difficulty = searchParams.get('difficulty');
     const no = parseInt(searchParams.get('no'));
     console.log("Request URL:", difficulty,no);
     await connectDB();
@@ -19,6 +19,11 @@ export async function GET(req) {
     {
       console.log("Difficulty:", difficulty,no);
       const count = parseInt(no);
+
+      if(difficulty === "Give Me Story")
+      {
+        difficulty = "easy";
+      }
   
       const query = difficulty
         ? { difficulty }

@@ -38,7 +38,7 @@ export default function Navbar() {
                     <Link href="/Dashboard" className="hover:text-yellow-400">
                         Dashboard
                     </Link>
-                    <Link href="/leaderboard" className="hover:text-yellow-400">
+                    <Link href="/LeaderBoard" className="hover:text-yellow-400">
                         Leaderboard
                     </Link>
                     

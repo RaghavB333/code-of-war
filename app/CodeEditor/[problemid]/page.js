@@ -1,11 +1,12 @@
 "use client";
 import dynamic from "next/dynamic";
-import { useState, useEffect,useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import Link from "next/link";
 import AnalysisChart from "@/components/Chart";
-import {UserDataContext} from "@/context/UserContext";
+import { UserDataContext } from "@/context/UserContext";
 import UserProtectWrapper from '@/components/UserProtectWrapper'
+import { useSearchParams } from "next/navigation";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -18,95 +19,10 @@ const languageMap = {
 };
 
 
-
-const wrapCode = (language, userCode) => {
-  if (language === "python") {
-    return `
-import json
-
-def sum_two_numbers(a: int, b: int) -> int:
-    return a + b  # User-defined function
-
-def main(**inputs):
-    # User's code
-    result = sum_two_numbers(**inputs)  # Call the user's function and return result
-    return result
-
-if __name__ == "__main__":
-    import sys
-    input_data = sys.stdin.read()
-    inputs = json.loads(input_data)
-    result = main(**inputs)
-    print(result)  # This will automatically print the result
-    `;
-  }
-
-  if (language === "javascript") {
-    return `
-const main = ${userCode};
-
-process.stdin.on("data", (data) => {
-    const inputs = JSON.parse(data);
-    const result = main(...Object.values(inputs));
-    console.log(result);  // Automatically handles print without user needing to write it.
-});
-    `;
-  }
-
-  if (language === "java") {
-    return `
-import java.util.*;
-import org.json.*;
-
-public class Main {
-    public static Object main(Object[] args) {
-        // User's code
-        ${userCode}
-    }
-
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        String input = scanner.useDelimiter("\\A").next();
-        JSONObject inputs = new JSONObject(input);
-        JSONArray keys = inputs.names();
-
-        Object[] args = new Object[keys.length()];
-        for (int i = 0; i < keys.length(); i++) {
-            args[i] = inputs.get(keys.getString(i));
-        }
-
-        Object result = main(args);
-        System.out.println(result);  // Automatically handles print without user needing to write it.
-    }
-}
-    `;
-  }
-
-  if (language === "cpp") {
-    return `
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <nlohmann/json.hpp>
-using namespace std;
-using json = nlohmann::json;
-
-// User's function
-${userCode}
-
-int main() {
-    string input;
-    getline(cin, input);
-    json j = json::parse(input);
-
-    auto result = main(j["a"], j["b"]);  // Assuming two inputs as an example
-    cout << result << endl;  // Automatically handles print without user needing to write it.
-    return 0;
-}
-    `;
-  }
-
-  return userCode;
+const wrapCode = (language, userCode, languageWrappers) => {
+  const wrapper = languageWrappers[language];
+  if (!wrapper) return userCode;
+  return wrapper.replace("{code}", userCode);
 };
 
 const CodeEditorPage = ({ params }) => {
@@ -122,9 +38,16 @@ const CodeEditorPage = ({ params }) => {
   const [submissions, setSubmissions] = useState([]); // Added for submissions
   const [hasRunTests, setHasRunTests] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [languageWrappers, setlanguageWrappers] = useState([])
+  const [AnalysisCode, setAnalysisCode] = useState("")
+  const [analysisTC, setanalysisTC] = useState()
 
 
-  const {user} = useContext(UserDataContext);
+  const { user } = useContext(UserDataContext);
+
+  const searchParams = useSearchParams();
+    const islobby = searchParams.get("lobby");
+    console.log("lobby status: ", islobby);
 
 
 
@@ -151,6 +74,7 @@ const CodeEditorPage = ({ params }) => {
         setExamples(problem.examples || []);
         setTestCases(problem.testCases || []);
         setproblemDesc(problem.description || "")
+        setlanguageWrappers(problem.languageWrappers)
         if (problem.predefinedCode) {
           setCode(problem.predefinedCode.python || "// Write your code here...");
         }
@@ -164,6 +88,7 @@ const CodeEditorPage = ({ params }) => {
 
   const [analysisResults, setAnalysisResults] = useState(null);
 
+
   const analyzeCode = async () => {
     if (!code) {
       alert("Please write some code before analyzing!");
@@ -171,7 +96,9 @@ const CodeEditorPage = ({ params }) => {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/analyze", { code });
+      console.log(language)
+      const response = await axios.post("http://localhost:5000/analyze", { code:AnalysisCode , language:language});
+      console.log(response.data)
       setAnalysisResults(response.data); // Store results for visualization
     } catch (error) {
       console.error("Error analyzing code:", error);
@@ -202,31 +129,52 @@ const CodeEditorPage = ({ params }) => {
     let allPassed = true;
     let firstFailedResult = null;
 
-
     for (const testCase of testCases) {
       try {
         console.log("Test Case Input:", testCase.inputs);
         console.log("Test Case Expected Output:", testCase.expectedOutput);
 
-        const wrappedCode = wrapCode(language, code);
+        const wrappedCode = wrapCode(language, code, languageWrappers);
         console.log("Wrapped Code:", wrappedCode);
+        setAnalysisCode(wrappedCode)
 
-        // Send the request to Judge0
+        // Get Judge0 URI from environment variable
+        const judge0URI = process.env.Judge0_URI || 'http://localhost:2358/';
+
+        const formatInputForLanguage = (language, inputs) => {
+          // For Python and JavaScript, we send JSON-formatted input
+          if (language === "python" || language === "javascript") {
+            return JSON.stringify(inputs);
+          }
+
+          // For C++ and Java, we flatten the values (supporting nested arrays)
+          const flattenInput = (value) => {
+            if (Array.isArray(value)) {
+              return value.map(flattenInput).join(" ");
+            } else if (typeof value === "object" && value !== null) {
+              return Object.values(value).map(flattenInput).join(" ");
+            } else {
+              return String(value);
+            }
+          };
+
+          return Object.values(inputs).map(flattenInput).join(" ");
+        };
+
+
+        // Usage:
+        const stdin = formatInputForLanguage(language, testCase.inputs);
+        setanalysisTC(stdin[0])
+
         const response = await axios.post(
-          "https://judge0-ce.p.rapidapi.com/submissions",
+          `${judge0URI}submissions`,
           {
             source_code: wrappedCode,
             language_id: languageMap[language],
-            stdin: JSON.stringify(testCase.inputs),
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              "X-RapidAPI-Key": "b8fce05a8cmsh11ff5053ac35373p11c76djsn94fd45351063",
-              "x-rapidapi-host": "judge0-ce.p.rapidapi.com",
-            },
+            stdin: stdin,
           }
         );
+
 
         const { token } = response.data;
         // console.log("Judge0 Token:", token);  // Log the token to see if it's being generated
@@ -236,13 +184,7 @@ const CodeEditorPage = ({ params }) => {
         let isPolling = true;
         while (isPolling) {
           const statusResponse = await axios.get(
-            `https://judge0-ce.p.rapidapi.com/submissions/${token}`,
-            {
-              headers: {
-                "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
-                "X-RapidAPI-Key": "b8fce05a8cmsh11ff5053ac35373p11c76djsn94fd45351063",
-              },
-            }
+            `${judge0URI}submissions/${token}`
           );
           console.log("Polling Status Response:", statusResponse.data);
 
@@ -299,14 +241,18 @@ const CodeEditorPage = ({ params }) => {
     setIsRunning(false);
   };
 
+
   const submitSolution = async () => {
-    console.log("user email ",user.email);
+    console.log("user email ", user.email);
     if (results) {
+      console.log("fjdjdfjproblemid",problemId);
       const submission = {
         username: user.email,
+        problemId: problemId,
         code,
         language,
         results,
+        islobby,
         timestamp: new Date().toISOString(),
       };
 
@@ -325,142 +271,171 @@ const CodeEditorPage = ({ params }) => {
     }
   };
 
-
-
-
   return (
     <UserProtectWrapper>
-    <div className="h-screen flex flex-col lg:flex-row">
+      <div className="h-screen flex flex-col lg:flex-row">
 
-      {/* Left Panel: Problem Description */}
-      <div className="w-full lg:w-1/2 bg-gray-100 p-6 overflow-y-auto text-gray-800">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold">{problemTitle}</h1>
-          <Link
-            href="/submissions"
-            className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md transition-transform transform hover:scale-105"
-          >
-            Submissions
-          </Link>
-        </div>
-
-        <h2 className="text-xl font-semibold mb-2">Problem Description</h2>
-        <p className="mb-4">{problemDesc}</p>
-
-        <h2 className="text-xl font-semibold mb-2">Examples</h2>
-        {examples.map((example, index) => (
-          <div key={index} className="bg-white p-4 rounded-lg shadow-md mb-4">
-            <p>
-              <strong>Input:</strong> {example.input}
-            </p>
-            <p>
-              <strong>Output:</strong> {example.output}
-            </p>
+        {/* Left Panel: Problem Description */}
+        <div className="w-full lg:w-1/2 bg-background p-6 overflow-y-auto text-white">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center justify-between mb-4">
+                      <h1 className="text-2xl font-bold text-white">{problemTitle}</h1>
+                      <div className="flex items-center space-x-2 ms-4">
+                        <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                          Easy
+                        </span>
+                      </div>
+                    </div>
+            <Link
+              href="/submissions"
+              className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md transition-transform transform hover:scale-105"
+            >
+              Submissions
+            </Link>
           </div>
-        ))}
-      </div>
-
-
-      {/* Right Panel: Code Editor */}
-      <div className="w-full lg:w-1/2 bg-gray-900 text-white p-6 flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <select
-            onChange={handleLanguageChange}
-            value={language}
-            className="p-2 bg-gray-700 rounded-lg text-white"
+          <div 
+            className="bg-background border-r text-white border-gray-950 flex flex-col"
           >
-            <option value="" disabled>
-              Select Language
-            </option>
-            {supportedLanguages.map((lang) => (
-              <option key={lang} value={lang}>
-                {lang.toUpperCase()}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={runTestCases}
-            disabled={isRunning}
-            className="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50"
-          >
-            {isRunning ? "Running..." : "Run Test Cases"}
-          </button>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-6">
+                  <div>
+                    
+                    
+                    <div className="prose max-w-none">
+                      <p className="text-white leading-relaxed whitespace-pre-wrap">{problemDesc}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h2 className="text-lg font-semibold text-white mb-4">Examples</h2>
+                    <div className="space-y-4">
+                      {examples.map((example, index) => (
+                        <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-200">
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-sm font-medium text-white">Input:</span>
+                              <code className="ml-2 text-sm font-mono bg-gray-500 px-2 py-1 rounded text-white">
+                                {example.input}
+                              </code>
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-white">Output:</span>
+                              <code className="ml-2 text-sm font-mono bg-gray-500 px-2 py-1 rounded text-white">
+                                {example.output}
+                              </code>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+            </div>
+          </div>
         </div>
 
-        {language && (
-          <MonacoEditor
-            height="400px"
-            language={language}
-            value={code}
-            onChange={(value) => setCode(value)}
-            options={{
-              fontSize: 16,
-              minimap: { enabled: false },
-              theme: "vs-dark",
-            }}
-          />
-        )}
+         {/* Right Panel: Code Editor*/}
+        <div className="w-full lg:w-1/2 bg-background text-white p-6 flex flex-col">
+          <div className="flex justify-between items-center mb-4">
+            <select
+              onChange={handleLanguageChange}
+              value={language}
+              className="p-2 bg-gray-700 rounded-lg text-white"
+            >
+              <option value="" disabled>
+                Select Language
+              </option>
+              {supportedLanguages.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang.toUpperCase()}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={runTestCases}
+              disabled={isRunning}
+              className="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50"
+            >
+              {isRunning ? "Running..." : "Run Test Cases"}
+            </button>
+          </div>
 
-        {/* Test Case Results */}
-        {results && hasRunTests && (
-          <>
-            <div className="mt-4 bg-gray-800 p-4 rounded-lg">
-              <h2 className="text-lg font-semibold mb-2">Results</h2>
-              {isRunning ? (
-                <p className="text-gray-500">Running...</p>
-              ) : results ? (
-                results.allPassed ? (
-                  <p className="text-green-500">All test cases passed!</p>
-                ) : (
-                  <div className="text-red-500">
-                    <p>
-                      <strong>Input:</strong> {JSON.stringify(results.inputs)}
-                    </p>
-                    <p>
-                      <strong>Expected Output:</strong> {results.expectedOutput}
-                    </p>
-                    <p>
-                      <strong>Actual Output:</strong> {results.actualOutput}
-                    </p>
-                  </div>
-                )
-              ) : null}
+          {language && (
+            <MonacoEditor
+              height="400px"
+              language={language}
+              value={code}
+              onChange={(value) => setCode(value)}
+              options={{
+                fontSize: 16,
+                minimap: { enabled: false },
+                theme: "vs-dark",
+              }}
+            />
+          )}
 
-            </div>
+          {/* Test Case Results */}
+          {results && hasRunTests && (
+            <>
+              <div className="mt-4 bg-gray-800 p-4 rounded-lg">
+                <h2 className="text-lg font-semibold mb-2">Results</h2>
+                {isRunning ? (
+                  <p className="text-gray-500">Running...</p>
+                ) : results ? (
+                  results.allPassed ? (
+                    <p className="text-green-500">All test cases passed!</p>
+                  ) : (
+                    <div className="text-red-500">
+                      <p>
+                        <strong>Input:</strong> {JSON.stringify(results.inputs)}
+                      </p>
+                      <p>
+                        <strong>Expected Output:</strong> {results.expectedOutput}
+                      </p>
+                      <p>
+                        <strong>Actual Output:</strong> {results.actualOutput}
+                      </p>
+                    </div>
+                  )
+                ) : null}
 
-            {/* Submission Button */}
-            {results.allPassed && (<>
-              <button
-                onClick={submitSolution}
-                disabled={hasSubmitted} // Disable button after submission
-                className={`mt-4 px-4 py-2 rounded-lg ${hasSubmitted
-                  ? "bg-gray-500 cursor-not-allowed"
-                  : "bg-green-500 hover:bg-green-600"
-                  }`}
-              >
-                {hasSubmitted ? "Solution Submitted" : "Submit Solution"}
-              </button>
-              <div className="mt-4">
+              </div>
+
+              {/* Submission Button */}
+              {results.allPassed && (<>
                 <button
-                  onClick={analyzeCode}
-                  className="bg-yellow-500 px-4 py-2 rounded-lg hover:bg-yellow-600"
+                  onClick={submitSolution}
+                  disabled={hasSubmitted} // Disable button after submission
+                  className={`mt-4 px-4 py-2 rounded-lg ${hasSubmitted
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "bg-green-500 hover:bg-green-600"
+                    }`}
                 >
-                  Analyze Code
+                  {hasSubmitted ? "Solution Submitted" : "Submit Solution"}
                 </button>
-              </div></>)}
+                <div className="mt-4">
+                  <button
+                    onClick={analyzeCode}
+                    className="bg-yellow-500 px-4 py-2 rounded-lg hover:bg-yellow-600"
+                  >
+                    Analyze Code
+                  </button>
+                </div></>)}
 
               {analysisResults && (
                 <div className="mt-8 bg-gray-800 p-6 rounded-lg shadow-lg">
                   <h2 className="text-lg font-semibold text-white">Analysis Results</h2>
                   <AnalysisChart data={analysisResults} />
                 </div>)}
-          
-          </>
-        )}
+
+            </>
+          )}
 
 
+        </div>
       </div>
-    </div>
     </UserProtectWrapper>
   );
 };

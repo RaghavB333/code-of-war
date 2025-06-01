@@ -1,90 +1,4 @@
-// "use client";
-
-// import { useState,useContext } from 'react';
-// import { LobbyDataContext } from '@/context/LobbyContext.jsx';
-// import { UserDataContext } from "@/context/UserContext";
-// import { useRouter } from "next/navigation";
-
-// export default function CreateLobby() {
-//   const { socket } = useContext(LobbyDataContext);
-//   const { user } = useContext(UserDataContext);
-
-//   const router = useRouter();
-
-
-//   const handleCreateLobby = async () => {
-//     try {
-//       // Verify socket connection first
-//       if (!socket.connected) {
-//         console.error('Socket not connected!');
-//         return;
-//       }
-  
-//       console.log('Attempting to create lobby...');
-      
-//       socket.emit('create-lobby', { email: user.email }, (response) => {
-//         if (!response) {
-//           console.error('No response received from server');
-//           return;
-//         }
-        
-//         if (response.success) {
-//           console.log('Lobby created successfully:', response.lobbyId);
-//           router.push(`/lobby/${response.lobbyId}`);
-//         } else {
-//           console.error('Failed to create lobby:', response.error);
-//         }
-//       });
-//     } catch (err) {
-//       console.error('Error in handleCreateLobby:', err);
-//     }
-//   };
-
-
-//   return (
-//     <div>
-//       <div>
-//         <form>
-//           <h3>Select number of problems</h3>
-//           <select className="w-[30vw] p-2 border text-black border-gray-300 rounded-md mb-4">
-//             <option hidden></option>
-//             <option value="1">1</option>
-//             <option value="2">2</option>
-//             <option value="3">3</option>
-//             <option value="4">4</option>
-//             <option value="5">5</option>
-//           </select>
-//           <h3>Select Difficulty</h3>
-//           <select className="w-[30vw] text-black p-2 border border-gray-300 rounded-md mb-4">
-//             <option hidden></option>
-//             <option value="Give me Story">Give me Story</option>
-//             <option value="Give me Balance">Give me Balance</option>
-//             <option value="Give me no Marcy">Give me no Marcy</option>
-//           </select>
-//           <h3>Select Time</h3>
-//           <select className="w-[30vw] text-black p-2 border border-gray-300 rounded-md mb-4">
-//             <option hidden></option>
-//             <option value="30">30 Minutes</option>
-//             <option value="45">45 Minutes</option>
-//             <option value="60">60 Minutes</option>
-//             <option value="90">90 Minutes</option>
-//             <option value="120">120 Minutes</option>
-//           </select>
-//         </form>
-//         <button 
-//       onClick={handleCreateLobby}
-//       // disabled={loading}
-//       className="create-lobby-btn"
-//     >
-//       Create Lobby
-//     </button>
-//       </div>
-//     </div>
-//   );
-// }
-
 "use client";
-
 import { useState, useContext, useEffect } from 'react';
 import { LobbyDataContext } from '@/context/LobbyContext.jsx';
 import { UserDataContext } from "@/context/UserContext";
@@ -130,16 +44,18 @@ export default function CreateLobby() {
   };
 
   const handleCreateLobby = async () => {
+    console.log('Email : ', user?.email);
     try {
       // Verify socket connection first
       if (!socket.connected) {
         setError('Socket not connected! Please refresh the page and try again.');
         return;
       }
+
+      
       
       setIsLoading(true);
       setError('');
-      
       socket.emit('create-lobby', { 
         email: user.email,
         settings: formData

@@ -48,6 +48,27 @@ const userSchema = new mongoose.Schema({
     socketId:{
         type: String,
         default: ''
+    },
+    streak: {
+        current: { type: Number, default: 0 },
+        max: { type: Number, default: 0 },          
+        lastSubmissionDate: { type: Date, default: null },  
+    },
+    submissionDates: {
+        type: [String], // Format: "YYYY-MM-DD"
+        default: [],
+    },
+    easyproblemssolved:{
+        type: Number,
+        default: 0
+    },
+    mediumproblemssolved:{
+        type: Number,
+        default: 0
+    },
+    hardproblemssolved:{
+        type: Number,
+        default: 0
     }
 });
 

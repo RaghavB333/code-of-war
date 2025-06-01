@@ -19,8 +19,10 @@ export async function POST(req, res) {
   const body = await req.json();
   
     const {email} = body;
+    console.log("Email:", email);
 
   const user = await userModel.findOne({email});
+  console.log("Friend : ", user);
 
   if(user.socketId)
   {
@@ -30,4 +32,11 @@ export async function POST(req, res) {
         { status: 200 }
     )
   }
+
+  return new Response(
+        JSON.stringify({id:"" }),
+
+        { status: 404 }
+    )
+
 }

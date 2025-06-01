@@ -1,10 +1,11 @@
 "use client";
-
+import React from "react";
 import { useState, useEffect} from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 
-const ProblemsPage = () => {
+
+const ProblemsPage = ({params}) => {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true); // New state for loading status
   const router = useRouter();
@@ -12,8 +13,14 @@ const ProblemsPage = () => {
   const searchParams = useSearchParams();
     const difficulty = searchParams.get("difficulty");
     const no = searchParams.get("no");
+    const sessionend = searchParams.get("sessionend");
+    const startedAt = searchParams.get("startedAt");
+    console.log("startedAt:", startedAt);
 
     console.log("Difficulty:", difficulty, no);
+
+    const { id } = React.use(params);
+    console.log("ID:", id );
 
   useEffect(() => {
     // Fetch problems from the API
@@ -33,7 +40,7 @@ const ProblemsPage = () => {
   }, []);
 
   const handleProblemClick = (problemId) => {
-    router.push(`/CodeEditor/${problemId}`);
+    router.push(`/CodeEditor/${problemId}?lobby=${id}`);
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -48,7 +55,6 @@ const ProblemsPage = () => {
         return "text-gray-500";
     }
   };
-
   return (
     <div className="min-h-screen bg-[#0a0a0a] p-6">
       <div className="max-w-4xl mx-auto bg-[#0a0a0a] shadow-md rounded-lg p-6">

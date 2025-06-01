@@ -16,6 +16,7 @@ const Playground = ({params}) => {
   
 
   const { id } = React.use(params);
+  console.log("plaground id:", id);
 
   const router = useRouter();
   const { user } = useContext(UserDataContext);
@@ -53,24 +54,6 @@ const Playground = ({params}) => {
   }
 
 
-  // useEffect(() => {
-  //   socket.on('connect', async() => {
-  //     console.log('Connected to server:', socket.id);
-
-  //   });
-  //   const handleRequestAccepted = (data) => {
-  //     console.log("Friend accepted invite:", data);
-  //     getplaygroundmembers(); // your function
-  //   };
-  
-  //   socket.on("request-accepted", handleRequestAccepted);
-  
-  //   return () => {
-  //     socket.off("request-accepted", handleRequestAccepted); // cleanup
-  //   };
-  // }, []);
-
-
   useEffect(() => {
     const handleRequestAccepted = (data) => {
       console.log("Friend accepted invite:", data);
@@ -83,31 +66,6 @@ const Playground = ({params}) => {
       socket.off("request-accepted", handleRequestAccepted);
     };
   }, []);
-
-
-  // socket.on("request-accepted", async(data) => {
-  //     console.log("friend",data);
-        
-  //         getplaygroundmembers();
-  //   })
-
-    // const getid = async (email) => {
-    //   const response = await axios.post("/api/getsocketid", { email });
-    //   console.log(response);
-    //   const sid = response.data.id;
-    //   return sid;
-    // };
-
-  // const startplayground = ()=>{
-  //   console.log("start");
-  //   members.forEach(async(member) => {
-  //     const socketid = await getid(member);
-  //     socket.emit('joinLobby', {lobbyid:id,socketid:socketid});
-      
-  //   });
-
-  //   // router.push('/problems');
-  // }
 
   const startplayground = async () => {
     console.log("start");

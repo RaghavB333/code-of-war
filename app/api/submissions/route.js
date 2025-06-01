@@ -1,5 +1,8 @@
 import connectDB from '../../../lib/mongoose'; // Utility to connect to DB
-import Submissions from '../../../models/submissions'; // Import Submission model
+import Submissions from '../../../models/submissions';
+import userModel from "@/models/user.model";
+import Problem from "@/models/problems"; // Import Submission model
+import playground from "@/models/playground"; // Import Playground model
 
 // Handle GET requests to fetch submissions with pagination
 export async function GET(request) {
@@ -45,7 +48,115 @@ export async function POST(request) {
     await connectDB();
 
     // Parse the incoming JSON request body
-    const { username,code, language, results } = await request.json();
+    const { username, problemId, code, language, results, islobby } = await request.json();
+    console.log(username,problemId, code, language, results);
+
+
+    const problem = await Problem.findOne({_id: problemId});
+    
+        console.log(problem);
+        
+            if(!problem)
+            {
+    
+                return new Response(
+                    JSON.stringify({ message: "Problem not found"}),
+                    { status: 400 }
+                  );
+            }
+            const difficulty = problem.difficulty;
+    
+            const isexist = await Submissions.findOne({
+                username: username,
+                problemId: problemId,
+                "results.allPassed": true
+            });
+    
+            console.log("isexist: ", isexist);
+    
+            if(!isexist)
+            {
+                if(difficulty === 'easy')
+                {
+                    if(islobby)
+                    {
+                     await playground.updateOne({ id: islobby, "members.name": username },{ $set: { "members.$.totalPoints": 50 } });
+
+                    }
+                    await userModel.updateOne({ email: username },
+                    { $inc: { easyproblemssolved: 1 } });
+                }
+                else if(difficulty === 'medium')
+                {
+                  if(islobby)
+                    {
+                     await playground.updateOne({ id: islobby, "members.name": username },{ $set: { "members.$.totalPoints": 100 } });
+
+                    }
+                    await userModel.updateOne({ email: username},
+                    {$inc:{ mediumproblemssolved: 1}});
+                }
+                else
+                {
+                  if(islobby)
+                    {
+                     await playground.updateOne({ id: islobby, "members.name": username },{ $set: { "members.$.totalPoints": 200 } });
+
+                    }
+                    await userModel.updateOne({ email: username},
+                    {$inc:{ hardproblemssolved: 1}});
+                }
+
+                const user = await userModel.findOne({ email: username });
+
+                    const today = new Date();
+                    const yesterday = new Date();
+                    yesterday.setDate(today.getDate() - 1);
+
+                    // Normalize dates to compare only the date part
+                    const lastDate = user.streak.lastSubmissionDate 
+                      ? new Date(user.streak.lastSubmissionDate.toDateString())
+                      : null;
+
+                    const todayDate = new Date(today.toDateString());
+
+                    if (!lastDate || lastDate < yesterday) {
+                      // Missed a day or first time
+                      user.streak.current = 1;
+                    } else if (lastDate.getTime() === yesterday.getTime()) {
+                      // Continued streak
+                      user.streak.current += 1;
+                    }
+
+                    // Update max streak
+                    user.streak.max = Math.max(user.streak.max, user.streak.current);
+
+                    // Update last submission date
+                    user.streak.lastSubmissionDate = today;
+
+                    const todayStr = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+
+                    if (!user.submissionDates.includes(todayStr)) {
+                      user.submissionDates.push(todayStr);
+                    }
+                    await user.save();
+
+            }
+            else
+            {
+              if(difficulty === 'easy' && islobby)
+                {
+                     await playground.updateOne({ id: islobby, "members.name": username },{ $inc: { "members.$.totalPoints": 50 } });
+                }
+              else if(difficulty === 'medium' && islobby)
+                {
+                     await playground.updateOne({ id: islobby, "members.name": username },{ $inc: { "members.$.totalPoints": 100 } });
+                }
+              else if(difficulty === 'hard' && islobby)
+                {
+                     await playground.updateOne({ id: islobby, "members.name": username },{ $inc: { "members.$.totalPoints": 200 } });
+                }
+            }
 
     // Create a new submission
     const newSubmission = new Submissions({
@@ -54,8 +165,9 @@ export async function POST(request) {
       language,
       results,
       timestamp: new Date().toISOString(),
+      problemId,
     });
-
+    
     // Save the new submission to the database
     await newSubmission.save();
 
