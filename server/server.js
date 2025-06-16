@@ -2,6 +2,10 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
+const cors = require("cors");
+const app = express();
+app.use(cors());
+
 
 // Database connection
 mongoose.connect('mongodb://localhost:27017/codeofwar', {
@@ -25,7 +29,7 @@ const UserSocket = mongoose.model('UserSocket', new mongoose.Schema({
   lastActive: { type: Date, default: Date.now }
 }));
 
-const app = express();
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {

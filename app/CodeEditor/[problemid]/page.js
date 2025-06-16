@@ -96,8 +96,9 @@ const CodeEditorPage = ({ params }) => {
     }
 
     try {
+      const analyzeUrl = process.env.NEXT_PUBLIC_ANALZYER;
       console.log(language)
-      const response = await axios.post("http://localhost:5000/analyze", { code:AnalysisCode , language:language});
+      const response = await axios.post(`${analyzeUrl}analyze`, { code:AnalysisCode , language:language});
       console.log(response.data)
       setAnalysisResults(response.data); // Store results for visualization
     } catch (error) {
