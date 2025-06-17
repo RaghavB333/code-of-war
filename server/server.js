@@ -36,7 +36,8 @@ const server = http.createServer(app);
 
 const allowedOrigins = [
   "http://localhost:3000", // local dev
-  "https://code-of-5erznpbd5-raghav-bhargavas-projects.vercel.app" // Vercel deployed frontend
+  "https://code-of-5erznpbd5-raghav-bhargavas-projects.vercel.app",
+  "https://code-of-war.vercel.app"
 ];
 
 // Express CORS
