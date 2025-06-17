@@ -1,3 +1,4 @@
+"use client"
 import React,{useContext, useEffect,useState} from 'react'
 import { UserDataContext } from '@/context/UserContext'
 import { useRouter } from 'next/navigation';
