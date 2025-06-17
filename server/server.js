@@ -34,24 +34,17 @@ const UserSocket = mongoose.model('UserSocket', new mongoose.Schema({
 
 const server = http.createServer(app);
 
-const allowedOrigins = [
-  "http://localhost:3000", // local dev
-  "https://code-of-5erznpbd5-raghav-bhargavas-projects.vercel.app",
-  "https://code-of-war.vercel.app"
-];
-
-// Express CORS
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
+  origin: "*", // Allow all origins
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: false // Set to true only if you're using cookies/auth headers
 }));
 
 // Socket.IO CORS
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
-    credentials: true
+    origin: "*", // Allow all origins
+    methods: ["GET", "POST"]
   },
   connectionStateRecovery: {
     maxDisconnectionDuration: 120000,
