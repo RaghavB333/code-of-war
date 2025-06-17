@@ -6,7 +6,7 @@ import { UserDataContext } from '@/context/UserContext';
 import io from 'socket.io-client';
 
 
-// const socket = io("http://localhost:4000");
+
 
 export default function AcceptInvite() {
   const router = useRouter();

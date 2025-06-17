@@ -5,7 +5,7 @@ import { io } from 'socket.io-client';
 
 export const LobbyDataContext = createContext();
 
-// const Socket = io("http://localhost:4000");
+
 const LobbyContext = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [currentLobby, setCurrentLobby] = useState(null);
@@ -13,7 +13,7 @@ const LobbyContext = ({ children }) => {
   const [lobbyStatus, setLobbyStatus] = useState('waiting');
 
   useEffect(() => {
-    const newSocket = io("http://localhost:4000");
+    const newSocket = io("https://code-of-war-1.onrender.com/");
     setSocket(newSocket);
 
     // Setup event listeners

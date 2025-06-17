@@ -12,7 +12,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import AcceptInvite from "@/components/AcceptInvite";
 
-// const socket = io("http://localhost:4000");
+
 
 
 

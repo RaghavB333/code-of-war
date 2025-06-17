@@ -26,9 +26,6 @@ export default function Navbar() {
                     <Link href="/Login" className="hover:text-yellow-400">
                         Login
                     </Link>
-                    <Link href="/tournaments" className="hover:text-yellow-400">
-                        Tournaments
-                    </Link>
                     <Link href="/Playground" className="hover:text-yellow-400">
                         Playground
                     </Link>
@@ -41,7 +38,7 @@ export default function Navbar() {
                     <Link href="/LeaderBoard" className="hover:text-yellow-400">
                         Leaderboard
                     </Link>
-                    
+
                 </div>
 
                 {/* Mobile Hamburger Icon */}
@@ -68,19 +65,29 @@ export default function Navbar() {
 
             {/* Mobile Menu */}
             {isOpen && (
-                <div className="md:hidden bg-gray-800">
-                    <Link href="/tournaments" className=" block px-4 py-2 hover:bg-gray-700">
-                        Tournaments
+                <div className="md:hidden bg-[#0a0a0a]">
+
+                    <Link href="/Signup" className=" block px-4 py-2 hover:bg-gray-700">
+                        Signup
+                    </Link>
+                    <Link href="/Login" className=" block px-4 py-2 hover:bg-gray-700">
+                        Login
                     </Link>
                     <Link href="/problems" className=" block px-4 py-2 hover:bg-gray-700">
                         Problems
                     </Link>
+                    <Link href="/Playground" className=" block px-4 py-2 hover:bg-gray-700">
+                        Playground
+                    </Link>
+
+
+                    <Link href="/Dashboard" className=" block px-4 py-2 hover:bg-gray-700">
+                        Dashboard
+                    </Link>
                     <Link href="/leaderboard" className=" block px-4 py-2 hover:bg-gray-700">
                         Leaderboard
                     </Link>
-                    <Link href="/about" className=" block px-4 py-2 hover:bg-gray-700">
-                        About
-                    </Link>
+
                 </div>
             )}
         </nav>

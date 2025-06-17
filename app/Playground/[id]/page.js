@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { UserDataContext } from "@/context/UserContext";
 import UserProtectWrapper from "@/components/UserProtectWrapper";
 
-const socket = io("http://localhost:4000");
+const socket = io("https://code-of-war-1.onrender.com/");
 
 const Playground = ({params}) => {
   const [friendId, setFriendId] = useState("");
