@@ -1,7 +1,7 @@
 import connectDB from "@/lib/mongoose";
 import userModel from "@/models/user.model";
 import blacklistTokenModel from "@/models/blacklistToken.model";
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const {validationResult} = require('express-validator');
 
