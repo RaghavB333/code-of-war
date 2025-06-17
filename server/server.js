@@ -30,26 +30,37 @@ const UserSocket = mongoose.model('UserSocket', new mongoose.Schema({
 }));
 
 
+
+
 const server = http.createServer(app);
+
+const allowedOrigins = [
+  "http://localhost:3000", // local dev
+  "https://code-of-5erznpbd5-raghav-bhargavas-projects.vercel.app" // Vercel deployed frontend
+];
+
+// Express CORS
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
+
+// Socket.IO CORS
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000",
-      "https://code-of-5erznpbd5-raghav-bhargavas-projects.vercel.app"
-    ],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
+    credentials: true
   },
   connectionStateRecovery: {
-    maxDisconnectionDuration: 120000, // 2 minutes
+    maxDisconnectionDuration: 120000,
     skipMiddlewares: true
   }
 });
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://code-of-5erznpbd5-raghav-bhargavas-projects.vercel.app"
-  ],
-  credentials: true,
-}));
+const socket = io("https://code-of-war-1.onrender.com", {
+  withCredentials: true
+});
+
 
 io.on('connection', async (socket) => {
   console.log('A user connected:', socket.id);
