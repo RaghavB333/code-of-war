@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require("cors");
 const app = express();
-app.use(cors());
+
 
 
 // Database connection
@@ -43,6 +43,13 @@ const io = new Server(server, {
     skipMiddlewares: true
   }
 });
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "https://code-of-5erznpbd5-raghav-bhargavas-projects.vercel.app"
+  ],
+  credentials: true,
+}));
 
 io.on('connection', async (socket) => {
   console.log('A user connected:', socket.id);
