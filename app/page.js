@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { io } from "socket.io-client";
-import { React, useEffect, useState, useContext,useRef } from "react";
+import { React, useEffect, useState, useContext, useRef } from "react";
 import { UserDataContext } from '@/context/UserContext';
 import { LobbyDataContext } from '@/context/LobbyContext';
 import { useRouter } from 'next/navigation';
@@ -33,97 +33,99 @@ export default function Home() {
     setShowMore(true);
   };
 
-  
-  
-  
-  
+
+
+
+
   const socketid = useRef(null);
-  
-  const {user, setUser} = useContext(UserDataContext);
-  const {socket,setSocket } = useContext(LobbyDataContext);
-  const router = useRouter(); 
-  
-  const token = localStorage.getItem('token');
-  
+
+  const { user, setUser } = useContext(UserDataContext);
+  const { socket, setSocket } = useContext(LobbyDataContext);
+  const router = useRouter();
+  const [token, setToken] = useState(null);
+
+
+  useEffect(() => {
+    const stored = localStorage.getItem('token');
+    setToken(stored);
+  }, []);
+
   // useEffect(() => {
   //   setSocket(socket);
   // }, [])
 
-  const storesocketid = async()=>{
+  const storesocketid = async () => {
     const email = user.email;
-    console.log(email,socketid.current);
+    console.log(email, socketid.current);
     const data = {
-      socketid:socketid.current,
+      socketid: socketid.current,
       email: email
     }
-    const response = await axios.post('/api/storesocketid',data);
+    const response = await axios.post('/api/storesocketid', data);
     console.log(response.data);
   }
-  
-    useEffect(() => {  
-      if(user && user.email && socketid.current != null)
-      {
-        storesocketid();
-      }
-    }, [user && user.email]);
+
+  useEffect(() => {
+    if (user && user.email && socketid.current != null) {
+      storesocketid();
+    }
+  }, [user && user.email]);
 
 
 
-    useEffect(() => {
-      if(socket != null)
-      {
+  useEffect(() => {
+    if (socket != null) {
 
-        const registerUser = () => {
-          if (user && user.email) {
-            console.log("Registering user:", user.email);
-            socket.emit("register-user", { email: user.email });
-          }
-        };
-        
-        socket.on('connect', () => {
+      const registerUser = () => {
+        if (user && user.email) {
+          console.log("Registering user:", user.email);
+          socket.emit("register-user", { email: user.email });
+        }
+      };
+
+      socket.on('connect', () => {
         console.log('Connected to server with socket ID:', socket.id);
         socketid.current = socket.id;
         registerUser(); // register on first connect
       });
-      
+
       // Register again if the socket reconnects
       socket.on('reconnect', () => {
         console.log("Reconnected:", socket.id);
         registerUser();
       });
-      
+
       return () => {
         socket.off("connect");
         socket.off("reconnect");
       };
     }
-    }, [user,socket]);
+  }, [user, socket]);
 
-    
-    useEffect(() => {
-      if(socket != null)
-      {
 
-        const handleInvite = (data) => {
-          console.log("received invite", data);
-          if (confirm(`${data.inviterEmail} invited you to a lobby`)) {
-            socket.emit('accept-invite', { 
-              lobbyId: data.lobbyId, 
-              email: user.email 
-            }, (response) => {
-              if (response.success) {
-                router.push(`/lobby/${response.lobbyId}`);
-              }
-            });
-          }
-        };
-        
-        socket.on('receive-invite', handleInvite);
-        return () => socket.off('receive-invite', handleInvite);
-      }
-      }, [socket, user && user.email, router]);
-    
-    
+  useEffect(() => {
+    if (socket != null) {
+
+      const handleInvite = (data) => {
+        console.log("received invite", data);
+        if (confirm(`${data.inviterEmail} invited you to a lobby`)) {
+          socket.emit('accept-invite', {
+            lobbyId: data.lobbyId,
+            email: user.email
+          }, (response) => {
+            if (response.success) {
+              router.push(`/lobby/${response.lobbyId}`);
+            }
+          });
+        }
+      };
+
+      socket.on('receive-invite', handleInvite);
+      return () => socket.off('receive-invite', handleInvite);
+    }
+  }, [socket, user && user.email, router]);
+
+
 
 
   // useEffect(() => {
@@ -154,23 +156,24 @@ export default function Home() {
 
 
   useEffect(() => {
-    if(token == null || token == undefined || token == ""){
+    if (token == null || token == undefined || token == "") {
       console.log("token is not exist")
-  }
-  else{
-    axios.post(`/api/profile`, {token
-  }).then((response) => {
-    if(response.status === 200){
-        const data = response.data;
-        console.log(data.data);
-        setUser(data.user);
     }
-  })
-  }
+    else {
+      axios.post(`/api/profile`, {
+        token
+      }).then((response) => {
+        if (response.status === 200) {
+          const data = response.data;
+          console.log(data.data);
+          setUser(data.user);
+        }
+      })
+    }
 
-    
+
   }, [token])
-  
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* <AcceptInvite/> */}
@@ -382,8 +385,8 @@ export default function Home() {
             >
               Get in Touch
             </a>
-            
-            
+
+
           </div>
         </motion.section>
       </main>

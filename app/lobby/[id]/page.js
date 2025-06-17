@@ -21,7 +21,12 @@ export default function LobbyPage() {
   const difficulty = usesearchParams.get("difficulty");
   const no = usesearchParams.get("no");
   console.log(difficulty,no);
-  const token = localStorage.getItem('token');
+  const [token, setToken] = useState(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('token');
+    setToken(stored);
+  }, []);
 
   useEffect(() => {
     if (!token) {
