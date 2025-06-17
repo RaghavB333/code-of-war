@@ -15,10 +15,10 @@ mongoose.connect(process.env.MONGODB_URI)
 
 const Playground = mongoose.model('Playground', new mongoose.Schema({
   id: { type: String, required: true, unique: true },
-  members: { type: [{name: String, totalPoints: Number}], default: [] },
+  members: { type: [{ name: String, totalPoints: Number }], default: [] },
   owner: { type: String, required: true },
   status: { type: String, enum: ['waiting', 'active', 'completed'], default: 'waiting' },
-  sessionend:{ type: Number,default: null},
+  sessionend: { type: Number, default: null },
   startedAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
 }));
@@ -33,7 +33,9 @@ const UserSocket = mongoose.model('UserSocket', new mongoose.Schema({
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000",
+      "https://code-of-5erznpbd5-raghav-bhargavas-projects.vercel.app"
+    ],
     methods: ["GET", "POST"],
   },
   connectionStateRecovery: {
@@ -48,7 +50,7 @@ io.on('connection', async (socket) => {
   // Register or update user socket ID
   socket.on('register-user', async ({ email }) => {
     if (!email) return;
-    
+
     try {
       await UserSocket.findOneAndUpdate(
         { email },
@@ -66,31 +68,31 @@ io.on('connection', async (socket) => {
   });
 
   // Create lobby handler
-  socket.on('create-lobby', async ({ email,settings }, callback) => {
+  socket.on('create-lobby', async ({ email, settings }, callback) => {
     console.log('Create lobby request received from:', email, settings);
-    
+
     try {
       if (!email) {
         throw new Error('Email is required');
       }
-  
+
       const lobbyId = generateLobbyId();
       console.log('Generating new lobby ID:', lobbyId);
-  
+
       const newLobby = new Playground({
         id: lobbyId,
-        members: [{name: email, totalPoints: 0}],
+        members: [{ name: email, totalPoints: 0 }],
         owner: email,
         sessionend: settings.timeLimit,
         status: 'waiting'
       });
-  
+
       const savedLobby = await newLobby.save();
       console.log('Lobby saved to DB:', savedLobby);
-  
+
       socket.join(lobbyId);
       console.log('Socket joined lobby room:', lobbyId);
-  
+
       // Important: Verify callback exists before calling it
       if (typeof callback === 'function') {
         callback({ success: true, lobbyId });
@@ -106,7 +108,7 @@ io.on('connection', async (socket) => {
   });
 
   // Invite handler
-  socket.on('send-invite', async ({ lobbyId, friendEmail,friendSocketId, inviterEmail}) => {
+  socket.on('send-invite', async ({ lobbyId, friendEmail, friendSocketId, inviterEmail }) => {
     console.log("invite received");
     try {
       // const friend = await UserSocket.findOne({ email: friendEmail });
@@ -114,9 +116,11 @@ io.on('connection', async (socket) => {
       const targetSocket = io.sockets.sockets.get(friendSocketId);
       console.log("Target socket:", targetSocket ? "Found" : "Not found");
       if (targetSocket) {
-        io.to(friendSocketId).emit('receive-invite', { lobbyId,
+        io.to(friendSocketId).emit('receive-invite', {
+          lobbyId,
           inviterEmail,
-          timestamp: new Date()});
+          timestamp: new Date()
+        });
       } else {
         console.log("Socket with ID", friendSocketId, "not currently connected.");
       }
@@ -145,7 +149,7 @@ io.on('connection', async (socket) => {
       }
       lobby.members.push(data);
       await lobby.save();
-      
+
       socket.join(lobbyId);
       io.to(lobbyId).emit('lobby-updated', lobby);
       callback({ success: true, lobbyId });
@@ -155,22 +159,22 @@ io.on('connection', async (socket) => {
   });
 
   // Start lobby handler (host only)
-  socket.on('start-lobby', async ({ lobbyId, email,difficulty,no }) => {
+  socket.on('start-lobby', async ({ lobbyId, email, difficulty, no }) => {
     console.log("Starting Lobby..................");
-    await Playground.updateOne({id: lobbyId }, { $set: {status: 'active',startedAt: new Date()}});
+    await Playground.updateOne({ id: lobbyId }, { $set: { status: 'active', startedAt: new Date() } });
     console.log("updated lobby status");
     const lobby = await Playground.findOne({ id: lobbyId });
-    console.log("lobby found",lobby);
+    console.log("lobby found", lobby);
     if (lobby && lobby.owner === email) {
-      io.to(lobbyId).emit('lobby-started', { 
-        redirectTo: `/problems/${lobbyId}?difficulty=${difficulty}&no=${no}&sessionend=${lobby.sessionend}&startedAt=${lobby.startedAt}`, 
+      io.to(lobbyId).emit('lobby-started', {
+        redirectTo: `/problems/${lobbyId}?difficulty=${difficulty}&no=${no}&sessionend=${lobby.sessionend}&startedAt=${lobby.startedAt}`,
       });
     }
   });
 
-  socket.on('disconnect', async() => {
-        console.log('A user disconnected:', socket.id);
-      });
+  socket.on('disconnect', async () => {
+    console.log('A user disconnected:', socket.id);
+  });
 
 });
 
