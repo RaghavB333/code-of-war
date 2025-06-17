@@ -140,7 +140,7 @@ const CodeEditorPage = ({ params }) => {
         setAnalysisCode(wrappedCode)
 
         // Get Judge0 URI from environment variable
-        const judge0URI = process.env.Judge0_URI || 'https://43.204.216.76:2358/';
+        const judge0URI = process.env.Judge0_URI || 'https://43.204.216.76/';
 
         const formatInputForLanguage = (language, inputs) => {
           // For Python and JavaScript, we send JSON-formatted input
