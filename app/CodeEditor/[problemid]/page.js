@@ -391,8 +391,8 @@ const CodeEditorPage = ({ params }) => {
                     onClick={submitSolution}
                     disabled={hasSubmitted}
                     className={`mt-4 px-4 py-2 rounded-lg ${hasSubmitted
-                        ? "bg-gray-500 cursor-not-allowed"
-                        : "bg-green-500 hover:bg-green-600"
+                      ? "bg-gray-500 cursor-not-allowed"
+                      : "bg-green-500 hover:bg-green-600"
                       }`}
                   >
                     {hasSubmitted ? "Solution Submitted" : "Submit Solution"}
@@ -410,12 +410,19 @@ const CodeEditorPage = ({ params }) => {
               )}
 
               {/* Analysis Chart */}
-              {analysisResults && (
+              {!analysisResults ? (
+                // Loader while results are loading
+                <div className="mt-8 flex justify-center items-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 border-solid"></div>
+                </div>
+              ) : (
+                // Results once loaded
                 <div className="mt-8 bg-gray-800 p-6 rounded-lg shadow-lg">
                   <h2 className="text-lg font-semibold text-white">Analysis Results</h2>
                   <AnalysisChart data={analysisResults} />
                 </div>
               )}
+
             </>
           )}
         </div>
