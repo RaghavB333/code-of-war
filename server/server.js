@@ -33,6 +33,17 @@ const UserSocket = mongoose.model('UserSocket', new mongoose.Schema({
 
 
 const server = http.createServer(app);
+app.use((req, res, next) => {
+  console.log("Incoming Origin Header:", req.headers.origin);
+  next();
+});
+
+const corsOptions = {
+  origin: "*", // OR use a whitelist array
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: false
+};
+console.log("CORS options used:", corsOptions);
 
 app.use(cors({
   origin: "*",
@@ -42,6 +53,7 @@ app.use(cors({
 
 // Socket.IO CORS
 const io = new Server(server, {
+
   cors: {
     origin: "*", 
     methods: ["GET", "POST"]
