@@ -30,7 +30,12 @@ export default function Home() {
   const [showMore, setShowMore] = useState(false);
 
   const handleLearnMore = () => {
-    setShowMore(true);
+    if (showMore) {
+      setShowMore(false);
+    }
+    else {
+      setShowMore(true)
+    }
   };
 
 
@@ -127,34 +132,6 @@ export default function Home() {
 
 
 
-
-  // useEffect(() => {
-  //   // Listen for incoming requests
-  //   // socket.on("receive-request", async(data) => {
-  //   //   console.log("user",data);
-  //   //   if(confirm(`${data.from} has Invite you`))
-  //   //   {
-  //   //     console.log("yes");
-  //   //     const response = await axios.post('/api/acceptinvite', {member:[data.from,data.friendemail],id:data.id});
-  //   //     console.log("response",response.data);
-  //   //     if(response.status === 200)
-  //   //     {
-  //   //       socket.emit("accept-invite", data);
-  //   //       router.push(`/Playground/${data.id}`)
-  //   //     }
-  //   //   }
-  //   //   else
-  //   //   {
-  //   //     console.log("NO");
-  //   //   }
-  //   // })
-
-  //   // return () => {
-  //   //   socket.off("receive-request");
-  //   // };
-  // }, []);
-
-
   useEffect(() => {
     if (token == null || token == undefined || token == "") {
       console.log("token is not exist")
@@ -183,7 +160,7 @@ export default function Home() {
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
-          className="py-48 flex flex-col justify-center items-center text-center text-white"
+          className="py-48 flex flex-col justify-center items-center text-center text-white mx-6 max-w-[100vw]"
         >
           <h2 className="text-5xl font-extrabold mb-4">
             Welcome to{" "}
@@ -269,7 +246,7 @@ export default function Home() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1 }}
-          className="flex justify-center items-center gap-6 py-10"
+          className="flex flex-col md:flex-row justify-center items-center relative bottom-12 gap-10 md:gap-10 md:py-10"
         >
           {/* First Image */}
           <motion.div
@@ -277,14 +254,14 @@ export default function Home() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 1.2 }}
             whileHover={{ scale: 1.1, y: -10 }}
-            className="rounded-lg shadow-lg relative bottom-20 right-10"
+            className="rounded-lg shadow-lg relative md:bottom-20 md:right-10"
           >
             <Image
               src={"/cp.png"}
               width={400}
               height={400}
               alt="Competitive Programming 1"
-              className="rounded-lg shadow-lg"
+              className="rounded-lg shadow-lg w-full max-w-[300px] md:max-w-[400px]"
             />
           </motion.div>
 
@@ -294,33 +271,35 @@ export default function Home() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 1.2 }}
             whileHover={{ scale: 1.1, y: -10 }}
-            className="rounded-lg shadow-lg relative top-4"
+            className="rounded-lg shadow-lg relative md:top-4"
           >
             <Image
               src={"/cp2.webp"}
               width={400}
               height={400}
               alt="Competitive Programming 2"
-              className="rounded-lg shadow-lg"
+              className="rounded-lg shadow-lg w-full max-w-[300px] md:max-w-[400px]"
             />
           </motion.div>
 
-          {/* Third Image */}
           <motion.div
             initial={{ x: -50, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 1.4 }}
             whileHover={{ scale: 1.1, x: 10 }}
-            className="rounded-lg shadow-lg relative bottom-20 left-10"
+            className="rounded-lg shadow-lg relative bottom-[80px] md:bottom-20 md:left-10 "
           >
-            <Image
-              src={"/cp3.jpeg"}
-              width={400}
-              height={400}
-              alt="Competitive Programming 3"
-              className="rounded-lg shadow-lg"
-            />
+            <div className="w-[300px] md:w-[400px] h-[300px] md:h-[400px] overflow-hidden rounded-lg shadow-lg">
+              <Image
+                src={"/cp3.jpeg"}
+                width={400}
+                height={400}
+                alt="Competitive Programming 3"
+                className="rounded-lg shadow-lg w-[350px] h-[300px] object-cover pt-20 "
+              />
+            </div>
           </motion.div>
+
         </motion.section>
 
 
@@ -330,7 +309,7 @@ export default function Home() {
           className="py-16 px-6 bg-C text-foreground transition-all"
         >
           <div className="mx-auto text-center">
-            <h1 className="tracking-tight inline font-semibold from-[#5EA2EF] to-[#0072F5] text-4xl lg:text-5xl bg-clip-text text-transparent bg-gradient-to-b">Key Features</h1>            <div className="grid md:grid-cols-3 gap-8 max-w-7xl mt-10 ml-24 ">
+            <h1 className="tracking-tight inline font-semibold from-[#5EA2EF] to-[#0072F5] text-4xl lg:text-5xl bg-clip-text text-transparent bg-gradient-to-b">Key Features</h1>            <div className="grid md:grid-cols-3 gap-8 max-w-7xl mt-10 mx-10 md:ml-24">
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 className="p-6 rounded-lg shadow-lg bg-[#0a0a0a] border-2 border-blue-400"
@@ -380,7 +359,7 @@ export default function Home() {
               strategist, or enthusiast, feel free to reach out to us!
             </p>
             <a
-              href="mailto:contact@codeofwar.com"
+              href="/contact"
               className="bg-gradient-to-r from-purple-600 to-purple-400  text-white py-2 px-6 rounded-lg text-lg font-semibold hover:bg-blue-700 transition duration-300"
             >
               Get in Touch
