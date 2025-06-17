@@ -51,9 +51,7 @@ const io = new Server(server, {
     skipMiddlewares: true
   }
 });
-const socket = io("https://code-of-war-1.onrender.com", {
-  withCredentials: true
-});
+
 
 
 io.on('connection', async (socket) => {
