@@ -8,10 +8,10 @@ app.use(cors());
 
 
 // Database connection
-mongoose.connect(`${process.env.MONGODB_URI}`, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
 
 const Playground = mongoose.model('Playground', new mongoose.Schema({
   id: { type: String, required: true, unique: true },
@@ -178,7 +178,7 @@ function generateLobbyId() {
   return Math.random().toString(36).substr(2, 6).toUpperCase();
 }
 
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
