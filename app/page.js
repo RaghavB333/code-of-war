@@ -152,7 +152,7 @@ export default function Home() {
   }, [token])
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* <AcceptInvite/> */}
       <main>
         {/* Hero Section */}
