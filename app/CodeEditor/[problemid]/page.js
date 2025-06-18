@@ -41,6 +41,8 @@ const CodeEditorPage = ({ params }) => {
   const [languageWrappers, setlanguageWrappers] = useState([])
   const [AnalysisCode, setAnalysisCode] = useState("")
   const [analysisTC, setanalysisTC] = useState()
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
 
 
   const { user } = useContext(UserDataContext);
@@ -96,6 +98,7 @@ const CodeEditorPage = ({ params }) => {
     }
 
     try {
+      setIsAnalyzing(true); // Start loader
       const analyzeUrl = process.env.NEXT_PUBLIC_ANALZYER;
       console.log(language)
       const response = await axios.post(`${analyzeUrl}/analyze`, { code: AnalysisCode, language: language });
@@ -104,6 +107,9 @@ const CodeEditorPage = ({ params }) => {
     } catch (error) {
       console.error("Error analyzing code:", error);
       alert("An error occurred while analyzing the code.");
+    } finally {
+      setIsAnalyzing(false);
+
     }
   };
 
@@ -167,16 +173,11 @@ const CodeEditorPage = ({ params }) => {
         const stdin = formatInputForLanguage(language, testCase.inputs);
         setanalysisTC(stdin[0])
 
-        const response = await axios.post(
-          `${judge0URI}submissions`,
-          {
-            source_code: wrappedCode,
-            language_id: languageMap[language],
-            stdin: stdin,
-          }
-        );
-
-
+        const response = await axios.post('/api/judge0/submit', {
+          source_code: wrappedCode,
+          language_id: languageMap[language],
+          stdin: stdin,
+        });
         const { token } = response.data;
         // console.log("Judge0 Token:", token);  // Log the token to see if it's being generated
 
@@ -184,25 +185,16 @@ const CodeEditorPage = ({ params }) => {
         let result;
         let isPolling = true;
         while (isPolling) {
-          const statusResponse = await axios.get(
-            `${judge0URI}submissions/${token}`
-          );
-          console.log("Polling Status Response:", statusResponse.data);
+          const statusResponse = await axios.post('/api/judge0/status', { token });
+          const status = statusResponse.data.status;
 
-          const { status, stdout, stderr } = statusResponse.data;
-          if (status.id === 3) {  // Status 3 is "Accepted"
-            isPolling = false;
+          if (status.id === 3 || status.id === 4 || status.id === 5) {
             result = statusResponse.data;
             break;
-          } else if (status.id === 4 || status.id === 5) {  // Errors or compilation failed
-            isPolling = false;
-            result = statusResponse.data;
-            break;
-          } else {
-            // Wait for 2 seconds before checking again
-            await new Promise((resolve) => setTimeout(resolve, 2000));
           }
+          await new Promise((res) => setTimeout(res, 2000));
         }
+
 
         // Handle the final result
         if (result && result.stdout) {
@@ -410,18 +402,17 @@ const CodeEditorPage = ({ params }) => {
               )}
 
               {/* Analysis Chart */}
-              {!analysisResults ? (
-                // Loader while results are loading
+              {isAnalyzing ? (
                 <div className="mt-8 flex justify-center items-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 border-solid"></div>
                 </div>
-              ) : (
-                // Results once loaded
+              ) : analysisResults && (
                 <div className="mt-8 bg-gray-800 p-6 rounded-lg shadow-lg">
                   <h2 className="text-lg font-semibold text-white">Analysis Results</h2>
                   <AnalysisChart data={analysisResults} />
                 </div>
               )}
+
 
             </>
           )}
