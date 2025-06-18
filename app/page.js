@@ -308,7 +308,7 @@ export default function Home() {
           id="features"
           className="py-16 px-6 bg-C text-foreground transition-all"
         >
-          <div className="mx-auto text-center">
+          <div className="mx-auto text-center text-white">
             <h1 className="tracking-tight inline font-semibold from-[#5EA2EF] to-[#0072F5] text-4xl lg:text-5xl bg-clip-text text-transparent bg-gradient-to-b">Key Features</h1>            <div className="grid md:grid-cols-3 gap-8 max-w-7xl mt-10 mx-10 md:ml-24">
               <motion.div
                 whileHover={{ scale: 1.05 }}
