@@ -84,7 +84,7 @@ export default function Navbar() {
                     <Link href="/Dashboard" className=" block px-4 py-2 hover:bg-gray-700">
                         Dashboard
                     </Link>
-                    <Link href="/leaderboard" className=" block px-4 py-2 hover:bg-gray-700">
+                    <Link href="/Leaderboard" className=" block px-4 py-2 hover:bg-gray-700">
                         Leaderboard
                     </Link>
 
