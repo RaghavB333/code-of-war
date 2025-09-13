@@ -49,23 +49,14 @@ export async function POST(req, res) {
   });
 
   const token = user.generateAuthToken();
-  return new Response(
-      JSON.stringify({ token,user }),
-      { status: 201 }
-    );
-
+    
+    return new Response(
+    JSON.stringify({ success: true, token, user }),
+    {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Set-Cookie": `token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`
+    }
+  })
 }
-
-
-
-// router.post('/login',[
-//     body('email').isEmail().withMessage('Invalid Email'),
-//     body('password').isLength({min:6}).withMessage('Password must be at least 6 characters long'),
-// ],
-//     usercontroller.loginUser
-// );
-
-// router.get('/profile', authMiddleware.authUser, usercontroller.getUserProfile);
-// router.get('/logout', authMiddleware.authUser, usercontroller.logoutUser);
-
-// module.exports = router;

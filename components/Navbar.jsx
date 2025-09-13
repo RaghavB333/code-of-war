@@ -1,10 +1,26 @@
 
 "use client"
-import { useState } from "react";
+import { useState, useContext } from "react";
 import Link from "next/link";
-
+import axios from 'axios'
+import { useRouter } from "next/navigation";
+import { UserDataContext } from '@/context/UserContext'
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
+    const {user, setUser} = useContext(UserDataContext);
+    const router = useRouter();
+
+    const logOut = async() => {
+        try{
+            const response = await axios.get('/api/logout', {withCredentials: true});
+            if(response.status === 200){
+                setUser(null);
+                router.push('/');
+            }
+        }catch(error){
+            console.log(error);
+        }
+    }
 
     return (
         <nav className="bg-[#0a0a0a]  text-white shadow-lg">
@@ -15,17 +31,8 @@ export default function Navbar() {
                         <img src="/cow1.png" alt="Logo" className="h-16 w-auto object-cover" />
                     </Link>
                 </div>
-
-
-
                 {/* Desktop Menu */}
                 <div className="hidden md:flex space-x-6">
-                    <Link href="/Signup" className="hover:text-yellow-400">
-                        Signup
-                    </Link>
-                    <Link href="/Login" className="hover:text-yellow-400">
-                        Login
-                    </Link>
                     <Link href="/tournaments" className="hover:text-yellow-400">
                         Tournaments
                     </Link>
@@ -41,7 +48,21 @@ export default function Navbar() {
                     <Link href="/LeaderBoard" className="hover:text-yellow-400">
                         Leaderboard
                     </Link>
-                    
+                    {!user ? (
+                        <>
+                        <Link href="/Signup" className="hover:text-yellow-400">
+                            Signup
+                        </Link>
+                        <Link href="/Login" className="hover:text-yellow-400">
+                            Login
+                        </Link>
+                    </>
+                    ) : (
+                        <button onClick={logOut} className="hover:text-red-400">
+                            Logout
+                        </button>
+                    )}
+                      
                 </div>
 
                 {/* Mobile Hamburger Icon */}
@@ -80,6 +101,12 @@ export default function Navbar() {
                     </Link>
                     <Link href="/about" className=" block px-4 py-2 hover:bg-gray-700">
                         About
+                    </Link>
+                      <Link href="/Signup" className="hover:text-yellow-400">
+                        Signup
+                    </Link>
+                    <Link href="/Login" className="hover:text-yellow-400">
+                        Login
                     </Link>
                 </div>
             )}

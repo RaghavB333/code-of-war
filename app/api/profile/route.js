@@ -1,13 +1,12 @@
 import connectDB from "@/lib/mongoose";
 import userModel from "@/models/user.model";
 import blacklistTokenModel from "@/models/blacklistToken.model";
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const {validationResult} = require('express-validator');
 
 
 
-export async function POST(req, res) {
+export async function GET(req) {
     // Connect to the database
     await connectDB();
   
@@ -19,10 +18,13 @@ export async function POST(req, res) {
           { status: 400 }
         );
     }
-    const body = await req.json();
-  
-    const {token} = body;
-  console.log("token",token)
+
+      const cookieHeader = req.headers.get("cookie");
+      const token = cookieHeader
+    ?.split("; ")
+    .find((c) => c.startsWith("token="))
+    ?.split("=")[1];
+    console.log("token : ",token);
     if(!token)
     {
         return new Response(
@@ -39,19 +41,52 @@ export async function POST(req, res) {
             JSON.stringify({ message: 'Unauthorized'}),
             { status: 400 }
           );
-    }     
+    }
+    
+    
+    try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const decoded = jwt.verify(token,process.env.JWT_SECRET);
-        console.log("decoded",decoded);
-        const user = await userModel.findById(decoded._id);
-        console.log(user);
-        if(user){
+    const user = await userModel.findById(decoded._id);
+
+    if(user){
 
             return new Response(
                 JSON.stringify({user}),
                 { status: 200 }
               );
         }
+
+} catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return new Response(
+                JSON.stringify({ message: "Token expired. Please log in again." }),
+                { status: 401 }
+              );
+    } else if (err.name === "JsonWebTokenError") {
+        return new Response(
+                JSON.stringify({ message: "Invalid token" }),
+                { status: 401 }
+              );
+    } else {
+        console.error("JWT error:", err);
+        return new Response(
+                JSON.stringify({ message: "Internal server error" }),
+                { status: 500 }
+              );
+    }
+}
+        // const decoded = jwt.verify(token,process.env.JWT_SECRET);
+        // console.log("decoded",decoded);
+        // const user = await userModel.findById(decoded._id);
+        // console.log(user);
+        // if(user){
+
+        //     return new Response(
+        //         JSON.stringify({user}),
+        //         { status: 200 }
+        //       );
+        // }
 
         return new Response(
             JSON.stringify({ message: 'Unauthorized'}),

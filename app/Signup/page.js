@@ -23,12 +23,12 @@ const Signup = () => {
         confirmPassword: confirmPassword
       };
   
-      const response = await axios.post(`/api/user`, newUser );
+      const response = await axios.post(`/api/user`, newUser, {withCredentials: true});
   
-      if(response.status === 201){
+      if(response.status === 200){
         const data = response.data;
         setUser(data.user);
-        console.log(data.token);
+        console.log(data);
         localStorage.setItem('token', data.token);
         router.push('/Login');
       }

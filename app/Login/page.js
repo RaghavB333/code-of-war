@@ -9,7 +9,7 @@ import { Mail, Lock } from 'lucide-react';
 const Login = () => {
     const [email, setemail] = useState('');
     const [password, setPassword] = useState('');
-    const [userData, setUserData] = useState({});
+    // const [userData, setUserData] = useState({});
   
     const {user, setUser} = useContext(UserDataContext);
     const router = useRouter();
@@ -20,11 +20,11 @@ const Login = () => {
        email: email,
        password: password
      };
-     const response = await axios.post(`/api/userlogin`, userData);
+     const response = await axios.post(`/api/userlogin`, userData, {withCredentials: true});
       if(response.status === 200){
         const data = response.data;
         setUser(data.user);
-        console.log(data.token)
+        console.log(data);
         localStorage.setItem('token', data.token);
         setemail('');
         setPassword('');

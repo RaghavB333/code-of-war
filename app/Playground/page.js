@@ -2,6 +2,7 @@
 import { useState, useContext, useEffect } from 'react';
 import { LobbyDataContext } from '@/context/LobbyContext.jsx';
 import { UserDataContext } from "@/context/UserContext";
+import UserProtectWrapper from '@/components/UserProtectWrapper'
 import { useRouter } from "next/navigation";
 
 export default function CreateLobby() {
@@ -82,6 +83,7 @@ export default function CreateLobby() {
   const isFormComplete = formData.problemCount && formData.difficulty && formData.timeLimit;
 
   return (
+    <UserProtectWrapper>
     <div className="min-h-screen bg-[#0a0a0a] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-lg mx-auto">
         <div className="bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
@@ -240,5 +242,6 @@ export default function CreateLobby() {
         </div>
       </div>
     </div>
+    </UserProtectWrapper>
   );
 }

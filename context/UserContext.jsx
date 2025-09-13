@@ -1,6 +1,7 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { createContext } from 'react'
+import axios from 'axios';
 export const UserDataContext = createContext();
 
 
@@ -11,6 +12,22 @@ const UserContext = ({children}) => {
     const updateUser = (user) => {
       setUser(user);
   };
+
+    useEffect(() => {
+     const getProfile = async() => {
+        try{
+          const response = await axios.get('/api/profile', {withCredentials: true});
+          if(response.status === 200){
+              const data = response.data;
+              console.log(data);
+              setUser(data.user);
+          }
+        }catch(error){
+          console.log(error);
+        }
+     }
+      getProfile();
+  }, []);
 
     const value = {
         user,

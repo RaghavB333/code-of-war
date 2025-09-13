@@ -1,5 +1,6 @@
 import connectDB from "@/lib/mongoose";
 import userModel from "@/models/user.model";
+// import sendToken from "@/utils/jwtToken";
 const {validationResult} = require('express-validator');
 
 export async function POST(req, res) {
@@ -41,9 +42,18 @@ export async function POST(req, res) {
           );
     }
 
+    // const token = user.generateAuthToken();
     const token = user.generateAuthToken();
+    
     return new Response(
-        JSON.stringify({ token,user}),
-        { status: 200 }
-      );
+    JSON.stringify({ success: true, token, user }),
+    {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Set-Cookie": `token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`
+    }
+  }
+);
+
 }

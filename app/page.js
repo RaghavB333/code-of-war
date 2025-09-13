@@ -10,12 +10,7 @@ import { useRouter } from 'next/navigation';
 import localFont from "next/font/local";
 import { motion } from "framer-motion";
 import axios from "axios";
-import AcceptInvite from "@/components/AcceptInvite";
-
-// const socket = io("http://localhost:4000");
-
-
-
+// import AcceptInvite from "@/components/AcceptInvite";
 
 
 const customFont = localFont({
@@ -43,11 +38,11 @@ export default function Home() {
   const {socket,setSocket } = useContext(LobbyDataContext);
   const router = useRouter(); 
   
-  const token = localStorage.getItem('token');
+  let token = null;
   
-  // useEffect(() => {
-  //   setSocket(socket);
-  // }, [])
+  useEffect(() => {
+    token = localStorage.getItem('token');
+  }, [])
 
   const storesocketid = async()=>{
     const email = user.email;
@@ -152,24 +147,6 @@ export default function Home() {
   //   // };
   // }, []);
 
-
-  useEffect(() => {
-    if(token == null || token == undefined || token == ""){
-      console.log("token is not exist")
-  }
-  else{
-    axios.post(`/api/profile`, {token
-  }).then((response) => {
-    if(response.status === 200){
-        const data = response.data;
-        console.log(data.data);
-        setUser(data.user);
-    }
-  })
-  }
-
-    
-  }, [token])
   
   return (
     <div className="min-h-screen bg-background text-foreground">
