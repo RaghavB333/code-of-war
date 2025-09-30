@@ -2,7 +2,7 @@ import connectDB from "@/lib/mongoose";
 import userModel from "@/models/user.model";
 const {validationResult} = require('express-validator');
 
-export async function POST(req, res) {
+export async function POST(req) {
   // Connect to the database
   await connectDB();
 
@@ -45,7 +45,8 @@ export async function POST(req, res) {
   const user = await userModel.create({
       username: username,
       email: email,
-      password: hashPassword
+      password: hashPassword,
+      authProvider: "credentials",
   });
 
   const token = user.generateAuthToken();
@@ -56,7 +57,7 @@ export async function POST(req, res) {
     status: 200,
     headers: {
       "Content-Type": "application/json",
-      "Set-Cookie": `token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`
+      "Set-Cookie": `token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
     }
   })
 }

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { createContext } from 'react'
 import axios from 'axios';
+import { useSession } from "next-auth/react";
 export const UserDataContext = createContext();
 
 
@@ -12,6 +13,28 @@ const UserContext = ({children}) => {
     const updateUser = (user) => {
       setUser(user);
   };
+
+    const { data: session } = useSession();
+  
+    const googleRegister = async(session) => {
+      try{
+        const res = await axios.post(`/api/googlelogin`, {
+            username: session.user.name,
+            email: session.user.email,
+          }, {withCredentials: true});
+          if(res.status === 200){
+            setUser(res.data.user);
+          }
+      }catch{
+        console.log("Google Signin Error");
+      }
+    }
+  
+      useEffect(() => {
+      if (session?.user) {
+        googleRegister(session);
+      }
+    }, [session]);
 
     useEffect(() => {
      const getProfile = async() => {

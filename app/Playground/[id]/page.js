@@ -5,9 +5,10 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import { useRouter } from "next/navigation";
 import { UserDataContext } from "@/context/UserContext";
+import { LobbyDataContext } from "@/context/LobbyContext";
 import UserProtectWrapper from "@/components/UserProtectWrapper";
 
-const socket = io("http://localhost:4000");
+// const socket = io("https://code-of-war-1.onrender.com/");
 
 const Playground = ({params}) => {
   const [friendId, setFriendId] = useState("");
@@ -20,6 +21,7 @@ const Playground = ({params}) => {
 
   const router = useRouter();
   const { user } = useContext(UserDataContext);
+  const {socket} = useContext(LobbyDataContext);
 
   const sendRequest = (email) => {
     socket.emit("send-request", { to: friendId, friendemail:email, from: user.email, sendersocketid: user.socketId,id:id });

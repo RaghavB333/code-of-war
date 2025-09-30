@@ -41,13 +41,15 @@ const CodeEditorPage = ({ params }) => {
   const [languageWrappers, setlanguageWrappers] = useState([])
   const [AnalysisCode, setAnalysisCode] = useState("")
   const [analysisTC, setanalysisTC] = useState()
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
 
 
   const { user } = useContext(UserDataContext);
 
   const searchParams = useSearchParams();
-    const islobby = searchParams.get("lobby");
-    console.log("lobby status: ", islobby);
+  const islobby = searchParams.get("lobby");
+  console.log("lobby status: ", islobby);
 
 
 
@@ -96,13 +98,18 @@ const CodeEditorPage = ({ params }) => {
     }
 
     try {
+      setIsAnalyzing(true); // Start loader
+      const analyzeUrl = process.env.NEXT_PUBLIC_ANALZYER;
       console.log(language)
-      const response = await axios.post("http://localhost:5000/analyze", { code:AnalysisCode , language:language});
+      const response = await axios.post(`${analyzeUrl}/analyze`, { code: AnalysisCode, language: language });
       console.log(response.data)
       setAnalysisResults(response.data); // Store results for visualization
     } catch (error) {
       console.error("Error analyzing code:", error);
       alert("An error occurred while analyzing the code.");
+    } finally {
+      setIsAnalyzing(false);
+
     }
   };
 
@@ -139,7 +146,7 @@ const CodeEditorPage = ({ params }) => {
         setAnalysisCode(wrappedCode)
 
         // Get Judge0 URI from environment variable
-        const judge0URI = process.env.Judge0_URI || 'http://localhost:2358/';
+        //const judge0URI = process.env.Judge0_URI || 'https://43.204.216.76/';
 
         const formatInputForLanguage = (language, inputs) => {
           // For Python and JavaScript, we send JSON-formatted input
@@ -166,16 +173,11 @@ const CodeEditorPage = ({ params }) => {
         const stdin = formatInputForLanguage(language, testCase.inputs);
         setanalysisTC(stdin[0])
 
-        const response = await axios.post(
-          `${judge0URI}submissions`,
-          {
-            source_code: wrappedCode,
-            language_id: languageMap[language],
-            stdin: stdin,
-          }
-        );
-
-
+        const response = await axios.post('/api/judge0/submit', {
+          source_code: wrappedCode,
+          language_id: languageMap[language],
+          stdin: stdin,
+        });
         const { token } = response.data;
         // console.log("Judge0 Token:", token);  // Log the token to see if it's being generated
 
@@ -183,25 +185,16 @@ const CodeEditorPage = ({ params }) => {
         let result;
         let isPolling = true;
         while (isPolling) {
-          const statusResponse = await axios.get(
-            `${judge0URI}submissions/${token}`
-          );
-          console.log("Polling Status Response:", statusResponse.data);
+          const statusResponse = await axios.post('/api/judge0/status', { token });
+          const status = statusResponse.data.status;
 
-          const { status, stdout, stderr } = statusResponse.data;
-          if (status.id === 3) {  // Status 3 is "Accepted"
-            isPolling = false;
+          if (status.id === 3 || status.id === 4 || status.id === 5) {
             result = statusResponse.data;
             break;
-          } else if (status.id === 4 || status.id === 5) {  // Errors or compilation failed
-            isPolling = false;
-            result = statusResponse.data;
-            break;
-          } else {
-            // Wait for 2 seconds before checking again
-            await new Promise((resolve) => setTimeout(resolve, 2000));
           }
+          await new Promise((res) => setTimeout(res, 2000));
         }
+
 
         // Handle the final result
         if (result && result.stdout) {
@@ -245,7 +238,7 @@ const CodeEditorPage = ({ params }) => {
   const submitSolution = async () => {
     console.log("user email ", user.email);
     if (results) {
-      console.log("fjdjdfjproblemid",problemId);
+      console.log("fjdjdfjproblemid", problemId);
       const submission = {
         username: user.email,
         problemId: problemId,
@@ -273,90 +266,77 @@ const CodeEditorPage = ({ params }) => {
 
   return (
     <UserProtectWrapper>
-      <div className="h-screen flex flex-col lg:flex-row">
+      <div className="min-h-screen flex flex-col lg:flex-row">
 
         {/* Left Panel: Problem Description */}
-        <div className="w-full lg:w-1/2 bg-background p-6 overflow-y-auto text-white">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center justify-between mb-4">
-                      <h1 className="text-2xl font-bold text-white">{problemTitle}</h1>
-                      <div className="flex items-center space-x-2 ms-4">
-                        <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                          Easy
-                        </span>
-                      </div>
-                    </div>
+        <div className="w-full lg:w-1/2 bg-background p-4 sm:p-6 overflow-y-auto text-white max-h-[50vh] lg:max-h-none">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+            <div className="flex items-center">
+              <h1 className="text-xl sm:text-2xl font-bold text-white">{problemTitle}</h1>
+              <div className="ml-4">
+                <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                  Easy
+                </span>
+              </div>
+            </div>
             <Link
               href="/submissions"
-              className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md transition-transform transform hover:scale-105"
+              className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md transition-transform transform hover:scale-105 w-full sm:w-auto text-center"
             >
               Submissions
             </Link>
           </div>
-          <div 
-            className="bg-background border-r text-white border-gray-950 flex flex-col"
-          >
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-                <div className="space-y-6">
-                  <div>
-                    
-                    
-                    <div className="prose max-w-none">
-                      <p className="text-white leading-relaxed whitespace-pre-wrap">{problemDesc}</p>
+          <div className="space-y-6">
+            <div>
+              <div className="prose max-w-none">
+                <p className="text-white leading-relaxed whitespace-pre-wrap">{problemDesc}</p>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-white mb-4">Examples</h2>
+              <div className="space-y-4">
+                {examples.map((example, index) => (
+                  <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-200">
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-sm font-medium text-white">Input:</span>
+                        <code className="ml-2 text-sm font-mono bg-gray-500 px-2 py-1 rounded text-white">
+                          {example.input}
+                        </code>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-white">Output:</span>
+                        <code className="ml-2 text-sm font-mono bg-gray-500 px-2 py-1 rounded text-white">
+                          {example.output}
+                        </code>
+                      </div>
                     </div>
                   </div>
-
-                  <div>
-                    <h2 className="text-lg font-semibold text-white mb-4">Examples</h2>
-                    <div className="space-y-4">
-                      {examples.map((example, index) => (
-                        <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-200">
-                          <div className="space-y-2">
-                            <div>
-                              <span className="text-sm font-medium text-white">Input:</span>
-                              <code className="ml-2 text-sm font-mono bg-gray-500 px-2 py-1 rounded text-white">
-                                {example.input}
-                              </code>
-                            </div>
-                            <div>
-                              <span className="text-sm font-medium text-white">Output:</span>
-                              <code className="ml-2 text-sm font-mono bg-gray-500 px-2 py-1 rounded text-white">
-                                {example.output}
-                              </code>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-         {/* Right Panel: Code Editor*/}
-        <div className="w-full lg:w-1/2 bg-background text-white p-6 flex flex-col">
-          <div className="flex justify-between items-center mb-4">
+        {/* Right Panel: Code Editor */}
+        <div className="w-full lg:w-1/2 bg-background text-white p-4 sm:p-6 flex flex-col overflow-y-auto max-h-[50vh] lg:max-h-none">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
             <select
               onChange={handleLanguageChange}
               value={language}
-              className="p-2 bg-gray-700 rounded-lg text-white"
+              className="p-2 bg-gray-700 rounded-lg text-white w-full sm:w-auto"
             >
-              <option value="" disabled>
-                Select Language
-              </option>
+              <option value="" disabled>Select Language</option>
               {supportedLanguages.map((lang) => (
-                <option key={lang} value={lang}>
-                  {lang.toUpperCase()}
-                </option>
+                <option key={lang} value={lang}>{lang.toUpperCase()}</option>
               ))}
             </select>
             <button
               onClick={runTestCases}
               disabled={isRunning}
-              className="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50"
+              className="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 w-full sm:w-auto"
             >
               {isRunning ? "Running..." : "Run Test Cases"}
             </button>
@@ -364,12 +344,12 @@ const CodeEditorPage = ({ params }) => {
 
           {language && (
             <MonacoEditor
-              height="400px"
+              height="40vh"
               language={language}
               value={code}
               onChange={(value) => setCode(value)}
               options={{
-                fontSize: 16,
+                fontSize: 14,
                 minimap: { enabled: false },
                 theme: "vs-dark",
               }}
@@ -388,56 +368,59 @@ const CodeEditorPage = ({ params }) => {
                     <p className="text-green-500">All test cases passed!</p>
                   ) : (
                     <div className="text-red-500">
-                      <p>
-                        <strong>Input:</strong> {JSON.stringify(results.inputs)}
-                      </p>
-                      <p>
-                        <strong>Expected Output:</strong> {results.expectedOutput}
-                      </p>
-                      <p>
-                        <strong>Actual Output:</strong> {results.actualOutput}
-                      </p>
+                      <p><strong>Input:</strong> {JSON.stringify(results.inputs)}</p>
+                      <p><strong>Expected Output:</strong> {results.expectedOutput}</p>
+                      <p><strong>Actual Output:</strong> {results.actualOutput}</p>
                     </div>
                   )
                 ) : null}
-
               </div>
 
-              {/* Submission Button */}
-              {results.allPassed && (<>
-                <button
-                  onClick={submitSolution}
-                  disabled={hasSubmitted} // Disable button after submission
-                  className={`mt-4 px-4 py-2 rounded-lg ${hasSubmitted
-                    ? "bg-gray-500 cursor-not-allowed"
-                    : "bg-green-500 hover:bg-green-600"
-                    }`}
-                >
-                  {hasSubmitted ? "Solution Submitted" : "Submit Solution"}
-                </button>
-                <div className="mt-4">
+              {/* Submit & Analyze Buttons */}
+              {results.allPassed && (
+                <>
                   <button
-                    onClick={analyzeCode}
-                    className="bg-yellow-500 px-4 py-2 rounded-lg hover:bg-yellow-600"
+                    onClick={submitSolution}
+                    disabled={hasSubmitted}
+                    className={`mt-4 px-4 py-2 rounded-lg ${hasSubmitted
+                      ? "bg-gray-500 cursor-not-allowed"
+                      : "bg-green-500 hover:bg-green-600"
+                      }`}
                   >
-                    Analyze Code
+                    {hasSubmitted ? "Solution Submitted" : "Submit Solution"}
                   </button>
-                </div></>)}
 
-              {analysisResults && (
+                  <div className="mt-4">
+                    <button
+                      onClick={analyzeCode}
+                      className="bg-yellow-500 px-4 py-2 rounded-lg hover:bg-yellow-600"
+                    >
+                      Analyze Code
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Analysis Chart */}
+              {isAnalyzing ? (
+                <div className="mt-8 flex justify-center items-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 border-solid"></div>
+                </div>
+              ) : analysisResults && (
                 <div className="mt-8 bg-gray-800 p-6 rounded-lg shadow-lg">
                   <h2 className="text-lg font-semibold text-white">Analysis Results</h2>
                   <AnalysisChart data={analysisResults} />
-                </div>)}
+                </div>
+              )}
+
 
             </>
           )}
-
-
         </div>
       </div>
     </UserProtectWrapper>
   );
+
 };
 
 export default CodeEditorPage;

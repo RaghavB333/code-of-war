@@ -3,7 +3,6 @@ import { useSearchParams, useRouter,useParams } from 'next/navigation';
 import { useState, useEffect, useContext } from 'react';
 import { UserDataContext } from '@/context/UserContext';
 import { LobbyDataContext } from '@/context/LobbyContext';
-import { io } from "socket.io-client";
 import axios from 'axios';
 
 export default function LobbyPage() {
@@ -21,29 +20,26 @@ export default function LobbyPage() {
   const difficulty = usesearchParams.get("difficulty");
   const no = usesearchParams.get("no");
   console.log(difficulty,no);
-  const token = localStorage.getItem('token');
 
-  useEffect(() => {
-    if (!token) {
-      console.log("token does not exist");
-    } else {
-      axios.post(`/api/profile`, { token })
-        .then(async(response) => {
-          if (response.status === 200) {
-            const data = response.data;
-            setUser(data.user);
-          }
-        })
-        .catch(err => console.error("Error fetching profile:", err));
-    }
-  }, [token, setUser]);
+  // useEffect(() => {
+  //   if (!token) {
+  //     console.log("token does not exist");
+  //   } else {
+  //     axios.post(`/api/profile`, { token })
+  //       .then(async(response) => {
+  //         if (response.status === 200) {
+  //           const data = response.data;
+  //           setUser(data.user);
+  //         }
+  //       })
+  //       .catch(err => console.error("Error fetching profile:", err));
+  //   }
+  // }, [token, setUser]);
 
   const getFriends = async () => {
     if (user && user.email) {
       try {
-        const response = await axios.post("/api/getfriends", {
-          email: user.email,
-        });
+        const response = await axios.get("/api/getfriends", {withCredentials:true});
         const data = response.data;
         setFriends(data.friends);
       } catch (err) {
@@ -128,6 +124,16 @@ export default function LobbyPage() {
       no
     });
   };
+
+  const rejoinLobby = () =>{
+    if(socket && socket !== null){
+      socket.emit('rejoin-lobby', {lobbyId});
+    }
+  }
+
+  useEffect(()=>{
+    rejoinLobby();
+  },[user && user.email && socket])
 
   if (loading) {
     return (
@@ -251,7 +257,7 @@ export default function LobbyPage() {
             </div>
             
             {/* Host Controls */}
-            {lobby.owner === user.email && (
+            {lobby?.owner === user?.email && (
               <div className="mt-8 text-center">
                 <button 
                   onClick={startLobby} 
@@ -267,7 +273,7 @@ export default function LobbyPage() {
             )}
             
             {/* Non-host message */}
-            {lobby.owner !== user.email && (
+            {lobby?.owner !== user?.email && (
               <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
                 <p className="text-blue-700">
                   Waiting for the host to start the coding session...

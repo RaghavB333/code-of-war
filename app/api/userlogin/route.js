@@ -3,7 +3,7 @@ import userModel from "@/models/user.model";
 // import sendToken from "@/utils/jwtToken";
 const {validationResult} = require('express-validator');
 
-export async function POST(req, res) {
+export async function POST(req) {
     // Connect to the database
     await connectDB();
 
@@ -20,7 +20,6 @@ export async function POST(req, res) {
 
   const {email,password} = body;
   console.log(email,password);
-
 
   const user = await userModel.findOne({email}).select('+password');
 
@@ -42,7 +41,6 @@ export async function POST(req, res) {
           );
     }
 
-    // const token = user.generateAuthToken();
     const token = user.generateAuthToken();
     
     return new Response(
@@ -51,7 +49,7 @@ export async function POST(req, res) {
     status: 200,
     headers: {
       "Content-Type": "application/json",
-      "Set-Cookie": `token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`
+      "Set-Cookie": `token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
     }
   }
 );

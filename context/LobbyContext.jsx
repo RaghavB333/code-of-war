@@ -1,18 +1,22 @@
 "use client"
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { createContext } from 'react'
 import { io } from 'socket.io-client';
+import { UserDataContext } from './UserContext';
 
 export const LobbyDataContext = createContext();
 
-// const Socket = io("http://localhost:4000");
+
 const LobbyContext = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [currentLobby, setCurrentLobby] = useState(null);
   const [lobbyMembers, setLobbyMembers] = useState([]);
   const [lobbyStatus, setLobbyStatus] = useState('waiting');
 
+  const {user} = useContext(UserDataContext);
+
   useEffect(() => {
+    if(user && user.email !== '' && user.email !== null){
     const newSocket = io("http://localhost:4000");
     setSocket(newSocket);
 
@@ -34,10 +38,42 @@ const LobbyContext = ({ children }) => {
       console.error('Lobby error:', error.message);
     });
 
+    
     return () => {
       newSocket.disconnect();
     };
-  }, []);
+  }
+  }, [user && user.email]);
+
+
+    useEffect(() => {
+      if (socket != null) {
+        const registerUser = () => {
+          if (user && user.email) {
+            console.log("Registering user:", user.email);
+            socket.emit("register-user", { email: user.email });
+          }
+        };
+  
+        socket.on('connect', () => {
+          console.log('Connected to server with socket ID:', socket.id);
+          registerUser(); // register on first connect
+        });
+  
+        // Register again if the socket reconnects
+        socket.on('reconnect', () => {
+          console.log("Reconnected:", socket.id);
+          registerUser();
+        });
+  
+        return () => {
+          socket.off("connect");
+          socket.off("reconnect");
+        };
+      }
+    }, [user, socket]);
+
+
 
   const updateLobby = (lobbyData) => {
     if (lobbyData.id) setCurrentLobby(lobbyData.id);

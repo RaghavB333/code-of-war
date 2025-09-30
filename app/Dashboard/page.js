@@ -2,10 +2,16 @@
 import React from 'react'
 import { useState, useEffect, useContext } from 'react';
 import { UserDataContext } from '@/context/UserContext';
+import { LobbyDataContext } from '@/context/LobbyContext';
 import UserProtectWrapper from '@/components/UserProtectWrapper'
-import { Mail, User, Bell, Plus, Activity, Users, Calendar, Settings, Trophy, Target, Zap, Crown } from 'lucide-react';
+import { Mail, User, Bell, Plus, Activity, Users, Calendar, Settings, Trophy, Target, Zap, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 import Heatmap from '@/components/Heatmap';
 import axios from 'axios';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 
 const Dashboard = () => {
     const [friendemail, setFriendEmail] = useState('');
@@ -13,7 +19,7 @@ const Dashboard = () => {
     const [friends, setFriends] = useState([]);
 
     const { user } = useContext(UserDataContext);
-    console.log(user);
+    const {socket} = useContext(LobbyDataContext);
 
     const getnotifications = async () => {
         if (user && user.email) {
@@ -26,7 +32,7 @@ const Dashboard = () => {
 
     const getFriends = async () => {
         if (user && user.email) {
-            const response = await axios.post('/api/getfriends', { email: user.email });
+            const response = await axios.get('/api/getfriends', {withCredentials:true});
             const data = response.data;
             setFriends(data.friends);
         }
@@ -46,9 +52,23 @@ const Dashboard = () => {
             senderEmail: senderEmail,
             receiverEmail: receiverEmail
         }
-        const response = await axios.post('api/acceptrequest', data);
+        const response = await axios.post('/api/acceptrequest', data);
         console.log(response.data);
+        getFriends();
         getnotifications();
+    }
+
+    const handleDeny = async(senderEmail) => {
+        try{
+            const response = await axios.put('/api/denyrequest', {senderEmail: senderEmail}, {withCredentials:true});
+            if(response.status == 200){
+                console.log(response.data);
+                getFriends();
+                getnotifications();
+            }
+        }catch(error){
+            console.log(error);
+        }
     }
 
     const handlesumbit = async (e) => {
@@ -58,8 +78,7 @@ const Dashboard = () => {
                 email: user.email,
                 friendemail: friendemail
             }
-            const response = await axios.post('/api/addfriend', data);
-            console.log(response);
+            socket.emit('add-friend', {data});
             setFriendEmail('');
         }
     }
@@ -153,7 +172,7 @@ const Dashboard = () => {
                                         <Users className="w-8 h-8 text-purple-100" />
                                         <div className="text-right">
                                             <p className="text-purple-100 text-sm font-medium">Friends</p>
-                                            <p className="text-3xl font-bold text-white">{friends.length}</p>
+                                            <p className="text-3xl font-bold text-white">{friends?.length}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -274,17 +293,17 @@ const Dashboard = () => {
                                         Friends
                                     </span>
                                     <span className="bg-purple-500/20 text-purple-300 text-sm px-3 py-1 rounded-full">
-                                        {friends.length}
+                                        {friends?.length}
                                     </span>
                                 </h2>
                                 <div className="space-y-3 max-h-64 overflow-y-auto">
-                                    {friends.length === 0 ? (
+                                    {friends?.length <= 0 ? (
                                         <div className="text-center py-8">
                                             <Users className="w-12 h-12 text-gray-500 mx-auto mb-3" />
                                             <p className="text-gray-400">No friends added yet</p>
                                         </div>
                                     ) : (
-                                        friends.map((friend, index) => (
+                                       friends?.length > 0 && friends.map((friend, index) => (
                                             <div key={index} className="flex items-center p-3 bg-gray-700/30 hover:bg-gray-700/50 rounded-xl transition-colors border border-gray-600/20">
                                                 <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mr-3">
                                                     <User className="w-5 h-5 text-white" />
@@ -300,59 +319,132 @@ const Dashboard = () => {
                             </div>
 
                             {/* Notifications Panel */}
-                            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/50 p-6">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-xl font-semibold text-white flex items-center">
-                                        <Bell className="w-6 h-6 mr-3 text-yellow-400" />
-                                        Notifications
-                                    </h2>
-                                    <span className="bg-yellow-500/20 text-yellow-300 text-sm px-3 py-1 rounded-full">
-                                        {notifications.length}
-                                    </span>
-                                </div>
-                                {notifications.length === 0 ? (
-                                    <div className="text-center py-8">
-                                        <Bell className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                                        <p className="text-gray-400">No new notifications</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4 max-h-80 overflow-y-auto">
-                                        {notifications.map(({ id, senderEmail, receiverEmail, timestamp, type }) => (
-                                            <div key={id} className="bg-gray-700/30 hover:bg-gray-700/50 rounded-xl p-4 transition-all border border-gray-600/20">
-                                                <div className="flex items-start justify-between mb-3">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center space-x-2 mb-1">
-                                                            <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
-                                                                <User className="w-4 h-4 text-white" />
-                                                            </div>
-                                                            <p className="text-white font-medium">{senderEmail.split('@')[0]}</p>
-                                                        </div>
-                                                        <p className="text-sm text-gray-300 ml-10">
-                                                            {type === 'friend_request' ? 'Sent you a friend request' : 'New notification'}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500 ml-10 mt-1">
-                                                            {new Date(timestamp).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        onClick={() => handleAccept(senderEmail, receiverEmail)}
-                                                        className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-emerald-500/25"
-                                                    >
-                                                        Accept
-                                                    </button>
-                                                    <button
-                                                        className="flex-1 bg-gray-600/50 hover:bg-gray-600/70 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 border border-gray-500/30"
-                                                    >
-                                                        Decline
-                                                    </button>
-                                                </div>
+<div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/50 p-6">
+    <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-semibold text-white flex items-center">
+            <Bell className="w-6 h-6 mr-3 text-yellow-400" />
+            Notifications
+        </h2>
+        <span className="bg-yellow-500/20 text-yellow-300 text-sm px-3 py-1 rounded-full">
+            {notifications.length}
+        </span>
+    </div>
+    
+    {notifications.length === 0 ? (
+        <div className="text-center py-8">
+            <Bell className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+            <p className="text-gray-400">No new notifications</p>
+        </div>
+    ) : (
+        <div className="relative overflow-hidden">
+            {/* Navigation Buttons */}
+            <div className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10">
+                <button className="notifications-prev bg-gray-800/90 hover:bg-gray-700 rounded-full p-2 shadow-lg transition-all duration-200">
+                    <ChevronLeft className="w-4 h-4 text-white" />
+                </button>
+            </div>
+            
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10">
+                <button className="notifications-next bg-gray-800/90 hover:bg-gray-700 rounded-full p-2 shadow-lg transition-all duration-200">
+                    <ChevronRight className="w-4 h-4 text-white" />
+                </button>
+            </div>
+
+            {/* Swiper Container */}
+            <div className="px-2"> {/* Added padding for nav buttons */}
+                <Swiper
+                    modules={[Navigation, Pagination]}
+                    spaceBetween={20}
+                    slidesPerView={1}
+                    navigation={{
+                        prevEl: '.notifications-prev',
+                        nextEl: '.notifications-next',
+                    }}
+                    pagination={{
+                        el: '.notifications-pagination',
+                        clickable: true,
+                        dynamicBullets: true,
+                    }}
+                    loop={notifications.length > 1}
+                    className="w-full"
+                    style={{ 
+                        height: 'auto',
+                        overflow: 'visible'
+                    }}
+                >
+
+                    <style jsx>{`
+    .swiper {
+        width: 100%;
+        height: auto;
+    }
+    
+    .swiper-slide {
+        width: 100% !important;
+        flex-shrink: 0;
+    }
+    
+    .swiper-wrapper {
+        display: flex;
+    }
+    
+    .notifications-pagination .swiper-pagination-bullet {
+        background: #6b7280;
+        opacity: 0.5;
+    }
+    
+    .notifications-pagination .swiper-pagination-bullet-active {
+        background: #3b82f6;
+        opacity: 1;
+    }
+`}</style>
+
+
+                    {notifications.map(({ _id, senderEmail, receiverEmail, createdAt, type }) => (
+                        <SwiperSlide key={_id}>
+                            <div className="bg-gray-700/30 hover:bg-gray-700/50 rounded-xl p-4 transition-all border border-gray-600/20 w-full">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className="flex-1">
+                                        <div className="flex items-center space-x-2">
+                                            <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                                                <User className="w-4 h-4 text-white" />
                                             </div>
-                                        ))}
+                                            <p className="text-white font-medium">{senderEmail.split('@')[0]}</p>
+                                        </div>
+                                        <p className="text-sm text-gray-300 ml-10">{senderEmail}</p>
+                                        <p className="text-sm text-gray-300 ml-10">
+                                            {type === 'friend_request' ? 'Sent you a friend request' : 'New Friend Request'}
+                                        </p>
+                                        <p className="text-xs text-gray-500 ml-10 mt-1">
+                                            {new Date(createdAt).toLocaleDateString()}
+                                        </p>
                                     </div>
-                                )}
+                                </div>
+                                <div className="flex space-x-2">
+                                    <button
+                                        onClick={() => handleAccept(senderEmail, receiverEmail)}
+                                        className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-emerald-500/25"
+                                    >
+                                        Accept
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeny(senderEmail)}
+                                        className="flex-1 bg-gray-600/50 hover:bg-gray-600/70 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 border border-gray-500/30"
+                                    >
+                                        Deny
+                                    </button>
+                                </div>
                             </div>
+                        </SwiperSlide>
+                    ))}
+                </Swiper>
+            </div>
+            
+            {/* Pagination dots */}
+            {/* <div className="notifications-pagination mt-4 text-center"></div> */}
+        </div>
+    )}
+</div>
                         </div>
                     </div>
                 </div>

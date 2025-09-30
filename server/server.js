@@ -1,42 +1,73 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const mongoose = require('mongoose');
+const connectDB = require('../lib/mongoose');
+const userModel = require('../models/user.model');
+const Playground = require('../models/playground')
+require("dotenv").config({ path: "../.env.local" });
+const cors = require("cors");
+const app = express();
+
+
 
 // Database connection
-mongoose.connect('mongodb://localhost:27017/codeofwar', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+// mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/codeofwar')
+//   .then(() => console.log("MongoDB connected"))
+//   .catch((err) => console.error("MongoDB connection error:", err));
+
+
+// const Playground = mongoose.model('Playground', new mongoose.Schema({
+//   id: { type: String, required: true, unique: true },
+//   members: { type: [{ name: String, totalPoints: Number }], default: [] },
+//   owner: { type: String, required: true },
+//   status: { type: String, enum: ['waiting', 'active', 'completed'], default: 'waiting' },
+//   sessionend: { type: Number, default: null },
+//   startedAt: { type: Date, default: Date.now },
+//   createdAt: { type: Date, default: Date.now }
+// }));
+
+// const UserSocket = mongoose.model('UserSocket', new mongoose.Schema({
+//   email: { type: String, required: true, unique: true },
+//   socketId: { type: String },
+//   lastActive: { type: Date, default: Date.now }
+// }));
+
+
+
+
+const server = http.createServer(app);
+app.use((req, res, next) => {
+  console.log("Incoming Origin Header:", req.headers.origin);
+  next();
 });
 
-const Playground = mongoose.model('Playground', new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  members: { type: [{name: String, totalPoints: Number}], default: [] },
-  owner: { type: String, required: true },
-  status: { type: String, enum: ['waiting', 'active', 'completed'], default: 'waiting' },
-  sessionend:{ type: Number,default: null},
-  startedAt: { type: Date, default: Date.now },
-  createdAt: { type: Date, default: Date.now }
+const corsOptions = {
+  origin: "*", // OR use a whitelist array
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: false
+};
+console.log("CORS options used:", corsOptions);
+
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: false 
 }));
 
-const UserSocket = mongoose.model('UserSocket', new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  socketId: { type: String },
-  lastActive: { type: Date, default: Date.now }
-}));
-
-const app = express();
-const server = http.createServer(app);
+// Socket.IO CORS
 const io = new Server(server, {
+
   cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
+    origin: "*", 
+    methods: ["GET", "POST"]
   },
   connectionStateRecovery: {
-    maxDisconnectionDuration: 120000, // 2 minutes
+    maxDisconnectionDuration: 120000,
     skipMiddlewares: true
   }
 });
+
+
 
 io.on('connection', async (socket) => {
   console.log('A user connected:', socket.id);
@@ -44,13 +75,14 @@ io.on('connection', async (socket) => {
   // Register or update user socket ID
   socket.on('register-user', async ({ email }) => {
     if (!email) return;
-    
+
     try {
-      await UserSocket.findOneAndUpdate(
+      await connectDB();
+      await userModel.findOneAndUpdate(
         { email },
         {
           socketId: socket.id,
-          lastActive: new Date()
+          // lastActive: new Date()
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
@@ -62,31 +94,31 @@ io.on('connection', async (socket) => {
   });
 
   // Create lobby handler
-  socket.on('create-lobby', async ({ email,settings }, callback) => {
+  socket.on('create-lobby', async ({ email, settings }, callback) => {
     console.log('Create lobby request received from:', email, settings);
-    
+
     try {
       if (!email) {
         throw new Error('Email is required');
       }
-  
+
       const lobbyId = generateLobbyId();
       console.log('Generating new lobby ID:', lobbyId);
-  
+
       const newLobby = new Playground({
         id: lobbyId,
-        members: [{name: email, totalPoints: 0}],
+        members: [{ name: email, totalPoints: 0 }],
         owner: email,
         sessionend: settings.timeLimit,
         status: 'waiting'
       });
-  
+
       const savedLobby = await newLobby.save();
       console.log('Lobby saved to DB:', savedLobby);
-  
+
       socket.join(lobbyId);
       console.log('Socket joined lobby room:', lobbyId);
-  
+
       // Important: Verify callback exists before calling it
       if (typeof callback === 'function') {
         callback({ success: true, lobbyId });
@@ -101,8 +133,42 @@ io.on('connection', async (socket) => {
     }
   });
 
+ socket.on('add-friend', async({data}) => {
+   const {email, friendemail} = data;
+   console.log(email, friendemail);
+      
+      const friend = await userModel.findOne({email: friendemail});
+      
+          if(!friend)
+          {
+              return new Response(
+                  JSON.stringify({ message: "Friend not found"}),
+                  { status: 400 }
+                );
+          }
+  
+          const notification = {
+              senderEmail:email,
+              receiverEmail: friendemail,
+              status: "panding",
+              createdAt: new Date()
+          }
+          let isSend = true;
+          if(friend.friends.includes(email)){
+            isSend = false;
+          }
+          if(isSend){
+            friend.notifications.map((n)=> n.senderEmail == email && n.receiverEmail == friendemail ? isSend = false : '');
+          }
+          if(isSend){
+            friend.notifications.push(notification);
+            await friend.save();
+            io.to(friend.socketId).emit("addFriendRequestReceived", email);
+          }
+ })
+
   // Invite handler
-  socket.on('send-invite', async ({ lobbyId, friendEmail,friendSocketId, inviterEmail}) => {
+  socket.on('send-invite', async ({ lobbyId, friendEmail, friendSocketId, inviterEmail }) => {
     console.log("invite received");
     try {
       // const friend = await UserSocket.findOne({ email: friendEmail });
@@ -110,9 +176,11 @@ io.on('connection', async (socket) => {
       const targetSocket = io.sockets.sockets.get(friendSocketId);
       console.log("Target socket:", targetSocket ? "Found" : "Not found");
       if (targetSocket) {
-        io.to(friendSocketId).emit('receive-invite', { lobbyId,
+        io.to(friendSocketId).emit('receive-invite', {
+          lobbyId,
           inviterEmail,
-          timestamp: new Date()});
+          timestamp: new Date()
+        });
       } else {
         console.log("Socket with ID", friendSocketId, "not currently connected.");
       }
@@ -141,7 +209,7 @@ io.on('connection', async (socket) => {
       }
       lobby.members.push(data);
       await lobby.save();
-      
+
       socket.join(lobbyId);
       io.to(lobbyId).emit('lobby-updated', lobby);
       callback({ success: true, lobbyId });
@@ -150,23 +218,30 @@ io.on('connection', async (socket) => {
     }
   });
 
+
+// Rejoin lobby
+  socket.on('rejoin-lobby', ({lobbyId}) =>{
+    console.log("rejoin", lobbyId);
+    socket.join(lobbyId);
+  })
+
   // Start lobby handler (host only)
-  socket.on('start-lobby', async ({ lobbyId, email,difficulty,no }) => {
+  socket.on('start-lobby', async ({ lobbyId, email, difficulty, no }) => {
     console.log("Starting Lobby..................");
-    await Playground.updateOne({id: lobbyId }, { $set: {status: 'active',startedAt: new Date()}});
+    await Playground.updateOne({ id: lobbyId }, { $set: { status: 'active', startedAt: new Date() } });
     console.log("updated lobby status");
     const lobby = await Playground.findOne({ id: lobbyId });
-    console.log("lobby found",lobby);
+    console.log("lobby found", lobby);
     if (lobby && lobby.owner === email) {
-      io.to(lobbyId).emit('lobby-started', { 
-        redirectTo: `/problems/${lobbyId}?difficulty=${difficulty}&no=${no}&sessionend=${lobby.sessionend}&startedAt=${lobby.startedAt}`, 
+      io.to(lobbyId).emit('lobby-started', {
+        redirectTo: `/problems/${lobbyId}?difficulty=${difficulty}&no=${no}&sessionend=${lobby.sessionend}&startedAt=${lobby.startedAt}`,
       });
     }
   });
 
-  socket.on('disconnect', async() => {
-        console.log('A user disconnected:', socket.id);
-      });
+  socket.on('disconnect', async () => {
+    console.log('A user disconnected:', socket.id);
+  });
 
 });
 
@@ -174,7 +249,7 @@ function generateLobbyId() {
   return Math.random().toString(36).substr(2, 6).toUpperCase();
 }
 
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

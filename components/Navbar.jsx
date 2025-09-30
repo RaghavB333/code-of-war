@@ -5,6 +5,7 @@ import Link from "next/link";
 import axios from 'axios'
 import { useRouter } from "next/navigation";
 import { UserDataContext } from '@/context/UserContext'
+import { signOut } from "next-auth/react";
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const {user, setUser} = useContext(UserDataContext);
@@ -33,9 +34,9 @@ export default function Navbar() {
                 </div>
                 {/* Desktop Menu */}
                 <div className="hidden md:flex space-x-6">
-                    <Link href="/tournaments" className="hover:text-yellow-400">
+                    {/* <Link href="/tournaments" className="hover:text-yellow-400">
                         Tournaments
-                    </Link>
+                    </Link> */}
                     <Link href="/Playground" className="hover:text-yellow-400">
                         Playground
                     </Link>
@@ -58,7 +59,7 @@ export default function Navbar() {
                         </Link>
                     </>
                     ) : (
-                        <button onClick={logOut} className="hover:text-red-400">
+                        <button onClick={()=> {logOut(); signOut({ callbackUrl: "/" })}} className="hover:text-red-400">
                             Logout
                         </button>
                     )}
@@ -89,25 +90,43 @@ export default function Navbar() {
 
             {/* Mobile Menu */}
             {isOpen && (
-                <div className="md:hidden bg-gray-800">
-                    <Link href="/tournaments" className=" block px-4 py-2 hover:bg-gray-700">
-                        Tournaments
+                <div className="md:hidden bg-[#0a0a0a]">
+
+                    <Link href="/Signup" className=" block px-4 py-2 hover:bg-gray-700">
+                        Signup
+                    </Link>
+                    <Link href="/Login" className=" block px-4 py-2 hover:bg-gray-700">
+                        Login
                     </Link>
                     <Link href="/problems" className=" block px-4 py-2 hover:bg-gray-700">
                         Problems
                     </Link>
-                    <Link href="/leaderboard" className=" block px-4 py-2 hover:bg-gray-700">
+                    <Link href="/Playground" className=" block px-4 py-2 hover:bg-gray-700">
+                        Playground
+                    </Link>
+                    <Link href="/Dashboard" className=" block px-4 py-2 hover:bg-gray-700">
+                        Dashboard
+                    </Link>
+                    <Link href="/LeaderBoard" className=" block px-4 py-2 hover:bg-gray-700">
                         Leaderboard
                     </Link>
                     <Link href="/about" className=" block px-4 py-2 hover:bg-gray-700">
                         About
                     </Link>
-                      <Link href="/Signup" className="hover:text-yellow-400">
-                        Signup
-                    </Link>
-                    <Link href="/Login" className="hover:text-yellow-400">
-                        Login
-                    </Link>
+                                          {!user ? (
+                        <>
+                        <Link href="/Signup" className="hover:text-yellow-400">
+                            Signup
+                        </Link>
+                        <Link href="/Login" className="hover:text-yellow-400">
+                            Login
+                        </Link>
+                    </>
+                    ) : (
+                        <button onClick={logOut} className="hover:text-red-400">
+                            Logout
+                        </button>
+                    )}
                 </div>
             )}
         </nav>

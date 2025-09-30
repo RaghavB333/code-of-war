@@ -80,7 +80,7 @@ const LeaderBoard = () => {
 
     return (
         <UserProtectWrapper>
-            <div className="min-h-screen bg-background py-8 px-4">
+            <div className="min-h-screen bg-[#0a0a0a] py-8 px-4 text-white">
                 <div className="max-w-6xl mx-auto">
                     {/* Header */}
                     <div className="text-center mb-12">

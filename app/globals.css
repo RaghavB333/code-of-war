@@ -22,7 +22,6 @@
   background-clip: text; /* Fallback for other browsers */
 }
 
-
 body {
   @apply font-sans;
   color: var(--foreground);

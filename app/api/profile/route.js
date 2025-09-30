@@ -1,6 +1,7 @@
 import connectDB from "@/lib/mongoose";
 import userModel from "@/models/user.model";
 import blacklistTokenModel from "@/models/blacklistToken.model";
+
 const jwt = require('jsonwebtoken');
 const {validationResult} = require('express-validator');
 

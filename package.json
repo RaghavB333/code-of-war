@@ -6,14 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "start-backend": "node server/server.js"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
     "@nextui-org/alert": "^2.2.9",
     "@nextui-org/react": "^2.6.11",
+    "@swc/helpers": "^0.5.17",
     "axios": "^1.7.9",
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
     "chart.js": "^4.4.7",
     "crypto": "^1.0.1",
     "date-fns": "^4.1.0",
@@ -28,14 +31,17 @@
     "mongoose": "^8.9.4",
     "nanoid": "^5.1.5",
     "next": "^15.1.3",
+    "next-auth": "^4.24.11",
     "nodemon": "^3.1.9",
     "react": "^18.3.1",
     "react-calendar-heatmap": "^1.10.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^18.3.1",
+    "react-icons": "^5.5.0",
     "react-syntax-highlighter": "^15.6.1",
     "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "swiper": "^12.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -26,11 +26,15 @@ export async function POST(req, res) {
     const receiver = await userModel.findOne({email: receiverEmail});
     const sender = await userModel.findOne({email: senderEmail});
 
-    receiver.friends.push(senderEmail);
-    await receiver.save();
+    if(!receiver.friends.includes(sender._id)){
+      receiver.friends.push(sender._id);
+      await receiver.save();
+    }
 
-    sender.friends.push(receiverEmail);
-    await sender.save();
+    if(!sender.friends.includes(receiver._id)){
+      sender.friends.push(receiver._id);
+      await sender.save();
+    }
 
     await userModel.updateOne(
         { email: receiverEmail },

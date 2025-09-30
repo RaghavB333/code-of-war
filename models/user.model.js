@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const userSchema = new mongoose.Schema({
        username:{
@@ -13,9 +13,16 @@ const userSchema = new mongoose.Schema({
         unique: true,
         minlength: [5,'Email name must be at least 5 characters long'],
     },
+    authProvider: {
+        type: String,
+        enum: ["credentials", "google"],
+        default: "credentials",
+  },
     password:{
         type: String,
-        required: true,
+        required: function() {
+        return this.authProvider === "credentials";
+        },
         select: false,       
     },
     notifications:{
@@ -41,10 +48,12 @@ const userSchema = new mongoose.Schema({
           ],
           default: [],
     },
-    friends:{
-        type: Array,
-        default: [],
+    friends:[
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // self-reference to the same collection
     },
+    ],
     socketId:{
         type: String,
         default: ''
