@@ -58,7 +58,7 @@ const Signup = () => {
 
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center mx-4">
-      <div className="bg-[#09090b] rounded-2xl border border-white/30 shadow-xl px-8 py-3 w-full max-w-[420px]">
+      <div className="bg-[#09090b] rounded-2xl border border-white/10 shadow-xl px-8 py-3 w-full max-w-[420px]">
         <div>
           <Image src='/cow1.png' alt='logo' width={220} height={100} className='mx-auto'></Image>
         </div>
@@ -72,7 +72,7 @@ const Signup = () => {
                 type="text"
                 value={username}
                 onChange={(e)=>setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#09090b] border border-white/30 focus:border-white/80 focus:ring-2 focus:ring-white/20 transition-colors text-white placeholder:text-[#67676e]"
+                className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#09090b] border border-white/10 focus:border-white/80 focus:ring-2 focus:ring-white/20 transition-colors text-white placeholder:text-[#67676e]"
                 placeholder="Enter your username"
                 required
               />
@@ -87,7 +87,7 @@ const Signup = () => {
                 type="email"
                 value={email}
                 onChange={(e)=>setemail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#09090b] border border-white/30 focus:border-white/80 focus:ring-2 focus:ring-white/20transition-colors text-white placeholder:text-[#67676e]"
+                className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#09090b] border border-white/10 focus:border-white/80 focus:ring-2 focus:ring-white/20transition-colors text-white placeholder:text-[#67676e]"
                 placeholder="Enter your email"
                 required
               />
@@ -102,7 +102,7 @@ const Signup = () => {
                 type="password"
                 value={password}
                 onChange={(e)=>setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#09090b] border border-white/30 focus:border-white/80 focus:ring-2 focus:ring-white/20 transition-colors text-white placeholder:text-[#67676e]"
+                className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#09090b] border border-white/10 focus:border-white/80 focus:ring-2 focus:ring-white/20 transition-colors text-white placeholder:text-[#67676e]"
                 placeholder="Create a password"
                 required
               />
@@ -117,7 +117,7 @@ const Signup = () => {
                 type="password"
                 value={confirmPassword}
                 onChange={(e)=>setConfirmPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#09090b] border border-white/30 focus:border-white/80 focus:ring-2 focus:ring-white/20 transition-colors text-white placeholder:text-[#67676e]"
+                className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#09090b] border border-white/10 focus:border-white/80 focus:ring-2 focus:ring-white/20 transition-colors text-white placeholder:text-[#67676e]"
                 placeholder="Confirm your password"
                 required
               />
@@ -138,7 +138,7 @@ const Signup = () => {
           <span className="text-xs text-muted-foreground">Or</span>
         </div>
 
-          <button onClick={() => signIn("google", { callbackUrl: "/" })} className="w-full flex justify-center items-center mt-3 bg-[#09090b] text-white border border-white/30 font-semibold py-2 rounded-lg transition-colors duration-300 shadow-md hover:shadow-lg">
+          <button onClick={() => signIn("google", { callbackUrl: "/" })} className="w-full flex justify-center items-center mt-3 bg-[#09090b] text-white border border-white/10 font-semibold py-2 rounded-lg transition-colors duration-300 shadow-md hover:shadow-lg">
               <FcGoogle className="mr-2 size-5" />
               Continue with Google
           </button>
