@@ -9,32 +9,6 @@ const cors = require("cors");
 const app = express();
 
 
-
-// Database connection
-// mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/codeofwar')
-//   .then(() => console.log("MongoDB connected"))
-//   .catch((err) => console.error("MongoDB connection error:", err));
-
-
-// const Playground = mongoose.model('Playground', new mongoose.Schema({
-//   id: { type: String, required: true, unique: true },
-//   members: { type: [{ name: String, totalPoints: Number }], default: [] },
-//   owner: { type: String, required: true },
-//   status: { type: String, enum: ['waiting', 'active', 'completed'], default: 'waiting' },
-//   sessionend: { type: Number, default: null },
-//   startedAt: { type: Date, default: Date.now },
-//   createdAt: { type: Date, default: Date.now }
-// }));
-
-// const UserSocket = mongoose.model('UserSocket', new mongoose.Schema({
-//   email: { type: String, required: true, unique: true },
-//   socketId: { type: String },
-//   lastActive: { type: Date, default: Date.now }
-// }));
-
-
-
-
 const server = http.createServer(app);
 app.use((req, res, next) => {
   console.log("Incoming Origin Header:", req.headers.origin);
@@ -67,10 +41,18 @@ const io = new Server(server, {
   }
 });
 
-
+  const onlineUsers = new Map();
 
 io.on('connection', async (socket) => {
   console.log('A user connected:', socket.id);
+
+
+    // When user connects, store their ID and socketId
+  socket.on("user_connected", ({userId}) => {
+    console.log("user id : ", userId);
+    onlineUsers.set(userId, socket.id);
+    io.emit("online_users", Array.from(onlineUsers.keys())); // optional broadcast
+  });
 
   // Register or update user socket ID
   socket.on('register-user', async ({ email }) => {
@@ -168,7 +150,7 @@ io.on('connection', async (socket) => {
  })
 
   // Invite handler
-  socket.on('send-invite', async ({ lobbyId, friendEmail, friendSocketId, inviterEmail }) => {
+  socket.on('send-invite', async ({ lobbyId, friendSocketId, inviterEmail }) => {
     console.log("invite received");
     try {
       // const friend = await UserSocket.findOne({ email: friendEmail });
@@ -198,20 +180,24 @@ io.on('connection', async (socket) => {
   });
 
   // Accept invite handler
-  socket.on('accept-invite', async ({ lobbyId, email }, callback) => {
+  socket.on('accept-invite', async ({ lobbyId, id }, callback) => {
     try {
-      const lobby = await Playground.findOne({ id: lobbyId });
+      const lobby = await Playground.findById(lobbyId);
       if (!lobby) return callback({ success: false, error: 'Lobby not found' });
 
       const data = {
-        name: email,
+        member: id,
         totalPoints: 0
       }
       lobby.members.push(data);
       await lobby.save();
+      const lby = await Playground.findById(lobbyId).populate({
+        path: 'members.member',
+        select: 'username email'
+      });
 
       socket.join(lobbyId);
-      io.to(lobbyId).emit('lobby-updated', lobby);
+      io.to(lobbyId).emit('lobby-updated', lby);
       callback({ success: true, lobbyId });
     } catch (err) {
       callback({ success: false, error: err.message });
@@ -226,21 +212,32 @@ io.on('connection', async (socket) => {
   })
 
   // Start lobby handler (host only)
-  socket.on('start-lobby', async ({ lobbyId, email, difficulty, no }) => {
+  socket.on('start-lobby', async ({ lobbyId, email }) => {
     console.log("Starting Lobby..................");
-    await Playground.updateOne({ id: lobbyId }, { $set: { status: 'active', startedAt: new Date() } });
+    await Playground.findByIdAndUpdate(lobbyId, { $set: { status: 'active', startedAt: new Date() } });
     console.log("updated lobby status");
-    const lobby = await Playground.findOne({ id: lobbyId });
+    const lobby = await Playground.findById(lobbyId);
     console.log("lobby found", lobby);
     if (lobby && lobby.owner === email) {
       io.to(lobbyId).emit('lobby-started', {
-        redirectTo: `/problems/${lobbyId}?difficulty=${difficulty}&no=${no}&sessionend=${lobby.sessionend}&startedAt=${lobby.startedAt}`,
+        redirectTo: `/problems/${lobbyId}`,
       });
     }
   });
 
+  socket.on('fetchOnline_users', ()=> {
+    io.emit("online_users", Array.from(onlineUsers.keys())); // optional broadcast
+  })
+
   socket.on('disconnect', async () => {
     console.log('A user disconnected:', socket.id);
+      for (const [userId, id] of onlineUsers.entries()) {
+      if (id === socket.id) {
+        onlineUsers.delete(userId);
+        break;
+      }
+    }
+    io.emit("online_users", Array.from(onlineUsers.keys())); // optional broadcast
   });
 
 });

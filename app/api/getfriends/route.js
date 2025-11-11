@@ -19,7 +19,6 @@ export async function GET(req) {
   const { user, error } = await authUser(req);
   if (error) return error;
 
-  console.log("user g : ", user);
   
 let friends = [];
 
@@ -27,12 +26,10 @@ if (user.friends && user.friends.length > 0) {
   // Map over friend IDs and fetch users
   friends = await Promise.all(
     user.friends.map(async (friendId) => {
-      const friend = await userModel.findById(friendId).select("email");
-      return friend?.email; // only email
+      const friend = await userModel.findById(friendId).select("username email socketId");
+      return friend; // only email
     })
   );
-
-  console.log("friends:", friends);
 
   return new Response(
     JSON.stringify({ friends }),

@@ -309,8 +309,8 @@ const Dashboard = () => {
                                                     <User className="w-5 h-5 text-white" />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <span className="text-white font-medium">{friend.split('@')[0]}</span>
-                                                    <p className="text-sm text-gray-400">{friend}</p>
+                                                    <span className="text-white font-medium">{friend.username}</span>
+                                                    <p className="text-sm text-gray-400">{friend.email}</p>
                                                 </div>
                                             </div>
                                         ))

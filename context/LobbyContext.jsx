@@ -51,10 +51,11 @@ const LobbyContext = ({ children }) => {
         const registerUser = () => {
           if (user && user.email) {
             console.log("Registering user:", user.email);
+            socket.emit("user_connected", {userId: user._id});
             socket.emit("register-user", { email: user.email });
           }
         };
-  
+        
         socket.on('connect', () => {
           console.log('Connected to server with socket ID:', socket.id);
           registerUser(); // register on first connect

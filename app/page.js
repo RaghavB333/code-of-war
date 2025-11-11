@@ -92,7 +92,7 @@ export default function Home() {
         if (confirm(`${data.inviterEmail} invited you to a lobby`)) {
           socket.emit('accept-invite', {
             lobbyId: data.lobbyId,
-            email: user.email
+            id: user._id
           }, (response) => {
             if (response.success) {
               router.push(`/lobby/${response.lobbyId}`);

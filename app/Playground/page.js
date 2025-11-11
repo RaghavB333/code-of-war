@@ -249,42 +249,40 @@
 
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { Search, X, Swords, Clock, Zap, Shield, ChevronDown } from 'lucide-react';
+import { LobbyDataContext } from '@/context/LobbyContext';
 import UserProtectWrapper from '@/components/UserProtectWrapper';
+import { useRouter } from "next/navigation";
 import axios from 'axios';
 
 const CreateLobby = () => {
+  const {socket} = useContext(LobbyDataContext);
+  const router = useRouter();
   const [selectionMode, setSelectionMode] = useState('automatic');
-  const [questionCount, setQuestionCount] = useState(10);
-  const [difficulty, setDifficulty] = useState('medium');
+  const [questionCount, setQuestionCount] = useState(3);
+  const [difficulty, setDifficulty] = useState('easy');
   const [timeLimit, setTimeLimit] = useState(30);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedQuestions, setSelectedQuestions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [problems, setProblems] = useState([]);
 
 
   useEffect(()=>{
     const fetchProblems = async() => {
       const response = await axios.get('/api/problems');
+      setProblems(response.data);
       console.log(response.data);
     }
     fetchProblems();
-  },[])
-  
-  const mockQuestions = [
-    { id: 1, title: "What is React?", difficulty: "easy" },
-    { id: 2, title: "Explain closures in JavaScript", difficulty: "medium" },
-    { id: 3, title: "What is the Virtual DOM?", difficulty: "easy" },
-    { id: 4, title: "How does async/await work?", difficulty: "hard" },
-    { id: 5, title: "What are React Hooks?", difficulty: "medium" },
-    { id: 6, title: "Explain event delegation", difficulty: "medium" },
-    { id: 7, title: "What is prototype inheritance?", difficulty: "hard" },
-    { id: 8, title: "Difference between let and const", difficulty: "easy" },
-  ];
+  },[]);
 
-  const filteredQuestions = mockQuestions.filter(q => 
+
+  const filteredQuestions = problems.filter(q => 
     q.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    !selectedQuestions.find(sq => sq.id === q.id)
+    !selectedQuestions.find(sq => sq._id === q._id)
   );
 
   const addQuestion = (question) => {
@@ -292,7 +290,7 @@ const CreateLobby = () => {
   };
 
   const removeQuestion = (id) => {
-    setSelectedQuestions(selectedQuestions.filter(q => q.id !== id));
+    setSelectedQuestions(selectedQuestions.filter(q => q._id !== id));
   };
 
   const getDifficultyColor = (diff) => {
@@ -304,6 +302,41 @@ const CreateLobby = () => {
     }
   };
 
+    const handleCreateLobby = async () => {
+    try {
+      // Verify socket connection first
+      if (!socket.connected) {
+        setError('Socket not connected! Please refresh the page and try again.');
+        return;
+      }
+      setIsLoading(true);
+      setError('');
+
+      let questions = [];
+      if(selectedQuestions.length > 0){
+        selectedQuestions.forEach((q)=> questions.push(q._id));
+      }
+      
+      let response;
+      if(selectionMode == 'automatic'){
+        response = await axios.post('/api/createplayground', {questionCount,difficulty,timeLimit}, {withCredentials: true});
+      }
+      else{
+        response = await axios.post('/api/createplayground', {questions, timeLimit}, {withCredentials: true});
+      }
+
+      if(response.status === 200){
+        setIsLoading(false);
+        router.push(`/lobby/${response.data.playground._id}`)
+      }
+
+    } catch (err) {
+      setIsLoading(false);
+      setError(`Error creating lobby: ${err.message}`);
+      console.log("error", err);
+    }
+  };
+  
   return (
     <UserProtectWrapper>
     <div className="min-h-screen bg-[#0a0a0a] text-gray-100 p-4 md:p-8 relative overflow-hidden">
@@ -372,7 +405,7 @@ const CreateLobby = () => {
                       onChange={(e) => setQuestionCount(Number(e.target.value))}
                       className="w-full bg-[#0a0a0a] border-2 border-white/10 rounded-lg px-4 py-4 text-white appearance-none cursor-pointer focus:border-white focus:outline-none transition-colors"
                     >
-                      {[5, 10, 15, 20, 25, 30].map(num => (
+                      {[3, 5, 7, 10, 15, 20].map(num => (
                         <option key={num} value={num}>{num} Questions</option>
                       ))}
                     </select>
@@ -389,9 +422,9 @@ const CreateLobby = () => {
                       onChange={(e) => setDifficulty(e.target.value)}
                       className="w-full bg-[#0a0a0a] border-2 border-white/10 rounded-lg px-4 py-4 text-white appearance-none cursor-pointer focus:border-white focus:outline-none transition-colors"
                     >
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
+                      <option value="easy">Give Me Story</option>
+                      <option value="medium">Give Me Balanced</option>
+                      <option value="hard">Give Me Mercy</option>
                       <option value="mixed">Mixed</option>
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
@@ -451,7 +484,7 @@ const CreateLobby = () => {
                 <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
                   {filteredQuestions.map(question => (
                     <div
-                      key={question.id}
+                      key={question._id}
                       onClick={() => addQuestion(question)}
                       className="bg-[#0a0a0a] border border-white/10 rounded-lg p-4 hover:border-white hover:bg-white cursor-pointer transition-all duration-300 group"
                     >
@@ -459,7 +492,7 @@ const CreateLobby = () => {
                         <div className="flex-1">
                           <p className="text-gray-200 group-hover:text-black transition-colors">{question.title}</p>
                           <span className={`text-xs font-semibold uppercase ${getDifficultyColor(question.difficulty)} mt-1 inline-block`}>
-                            {question.difficulty}
+                            {question.difficulty == 'easy' ? 'Give Me Story' : question.difficulty == 'medium' ? 'Give Me Balanced' : 'Give Me No Mercy'}
                           </span>
                         </div>
                         <button className="px-4 py-2 bg-white text-black rounded-md text-sm font-semibold group-hover:bg-[#0a0a0a] group-hover:text-white transition-all">
@@ -486,18 +519,18 @@ const CreateLobby = () => {
                   ) : (
                     selectedQuestions.map(question => (
                       <div
-                        key={question.id}
+                        key={question._id}
                         className="bg-[#0a0a0a] border border-white/10 rounded-lg p-4 hover:border-white hover:bg-white hover:text-black transition-all duration-300 group"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
                             <p className="text-gray-200 group-hover:text-black">{question.title}</p>
                             <span className={`text-xs font-semibold uppercase ${getDifficultyColor(question.difficulty)} mt-1 inline-block`}>
-                              {question.difficulty}
+                              {question.difficulty == 'easy' ? 'Give Me Story' : question.difficulty == 'medium' ? 'Give Me Balanced' : 'Give Me No Mercy'}
                             </span>
                           </div>
                           <button
-                            onClick={() => removeQuestion(question.id)}
+                            onClick={() => removeQuestion(question._id)}
                             className="p-2 bg-white text-black rounded-md group-hover:bg-black group-hover:text-white transition-all"
                           >
                             <X className="w-4 h-4" />
@@ -539,7 +572,7 @@ const CreateLobby = () => {
 
         {/* Create Lobby Button */}
         <div className="text-center">
-          <button className="group relative px-12 md:px-16 py-5 md:py-6 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white text-xl md:text-2xl font-bold rounded-xl shadow-2xl shadow-blue-900/50 hover:shadow-blue-900/80 transition-all duration-300 hover:scale-105 border-2 border-blue-500 overflow-hidden">
+          <button onClick={handleCreateLobby} className="group relative px-12 md:px-16 py-5 md:py-6 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white text-xl md:text-2xl font-bold rounded-xl shadow-2xl shadow-blue-900/50 hover:shadow-blue-900/80 transition-all duration-300 hover:scale-105 border-2 border-blue-500 overflow-hidden">
             <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
             <span className="relative flex items-center justify-center gap-3">
               <Swords className="w-6 h-6 md:w-7 md:h-7" />

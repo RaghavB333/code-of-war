@@ -1,5 +1,5 @@
 "use client";
-import { useSearchParams, useRouter,useParams } from 'next/navigation';
+import { useRouter,useParams } from 'next/navigation';
 import { useState, useEffect, useContext } from 'react';
 import { UserDataContext } from '@/context/UserContext';
 import { LobbyDataContext } from '@/context/LobbyContext';
@@ -7,40 +7,23 @@ import axios from 'axios';
 
 export default function LobbyPage() {
   const { id: lobbyId } = useParams();
-  console.log(lobbyId);
   const router = useRouter();
   const { socket } = useContext(LobbyDataContext);
-  const { user, setUser } = useContext(UserDataContext);
+  const { user } = useContext(UserDataContext);
   const [lobby, setLobby] = useState(null);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [onlineFriends, setOnlineFriends] = useState([]);
 
-  const usesearchParams = useSearchParams();
-
-  const difficulty = usesearchParams.get("difficulty");
-  const no = usesearchParams.get("no");
-  console.log(difficulty,no);
-
-  // useEffect(() => {
-  //   if (!token) {
-  //     console.log("token does not exist");
-  //   } else {
-  //     axios.post(`/api/profile`, { token })
-  //       .then(async(response) => {
-  //         if (response.status === 200) {
-  //           const data = response.data;
-  //           setUser(data.user);
-  //         }
-  //       })
-  //       .catch(err => console.error("Error fetching profile:", err));
-  //   }
-  // }, [token, setUser]);
+  const memberIds = new Set(lobby?.members?.map(m => m.member?._id?.toString()));
+  const notInLobby = friends?.filter(friend => !memberIds.has(friend._id.toString()));
 
   const getFriends = async () => {
     if (user && user.email) {
       try {
         const response = await axios.get("/api/getfriends", {withCredentials:true});
         const data = response.data;
+        console.log("friends : ",response.data);
         setFriends(data.friends);
       } catch (err) {
         console.error("Error fetching friends:", err);
@@ -61,6 +44,7 @@ export default function LobbyPage() {
         const response = await axios.get(`/api/createplayground?id=${lobbyId}`);
         const data = response.data;
         setLobby(data.lobby);
+        console.log("lobby : ", data);
       } catch (err) {
         console.error("Error fetching lobby data:", err);
       } finally {
@@ -74,8 +58,13 @@ export default function LobbyPage() {
   useEffect(() => {
     if(socket != null)
     {
-
+      socket.emit("fetchOnline_users");
+      socket.on("online_users", (users) => {
+        console.log("Online users:", users);
+        setOnlineFriends(users);
+      });
       socket.on('lobby-updated', (updatedLobby) => {
+        console.log("updatedlobby : ", updatedLobby);
         setLobby(updatedLobby);
       });
       
@@ -88,12 +77,12 @@ export default function LobbyPage() {
         socket.off('lobby-started');
       };
     }
-  }, [socket, router]);
+  }, [user, socket]);
 
-  const getfriendsocketid = async (email) => {
+  const getfriendsocketid = async (id) => {
     try {
-      console.log("Getting friend's socket ID for:", email);
-      const response = await axios.post("/api/getsocketid", { email });
+      console.log("Getting friend's socket ID for:", id);
+      const response = await axios.get(`/api/getsocketid/${id}`);
       const friendsocketdata = await response.data;
       return friendsocketdata.id;
     } catch (err) {
@@ -102,13 +91,13 @@ export default function LobbyPage() {
     }
   };
 
-  const inviteFriend = async (friendEmail) => {
-    console.log("Inviting friend:", friendEmail);
-    const friendSocketId = await getfriendsocketid(friendEmail);
+  const inviteFriend = async (friendId) => {
+    console.log("Inviting friend:", friendId);
+    const friendSocketId = await getfriendsocketid(friendId);
+    console.log(friendSocketId);
     if (friendSocketId) {
       socket.emit('send-invite', {
         lobbyId,
-        friendEmail,
         friendSocketId,
         senderSokcketId: user.socketId,
         inviterEmail: user.email,
@@ -120,8 +109,6 @@ export default function LobbyPage() {
     socket.emit('start-lobby', {
       lobbyId,
       email: user.email,
-      difficulty,
-      no
     });
   };
 
@@ -134,6 +121,27 @@ export default function LobbyPage() {
   useEffect(()=>{
     rejoinLobby();
   },[user && user.email && socket])
+
+
+  const [contextMenu, setContextMenu] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null);
+
+  // Close menu when clicking anywhere else
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
+
+  const handleContextMenu = (e, member) => {
+    e.preventDefault(); // prevent default browser right-click menu
+    setContextMenu({
+      x: e.pageX,
+      y: e.pageY,
+    });
+    console.log('selcted Id : ', member._id);
+    setSelectedMember(member._id);
+  };
 
   if (loading) {
     return (
@@ -169,17 +177,17 @@ export default function LobbyPage() {
         <div className="bg-[#0a0a0a] rounded-xl shadow-lg overflow-hidden mb-6">
           <div className="bg-gradient-to-r bg-[#0a0a0a]">
             <h2 className="text-3xl font-bold text-white">
-              Lobby: {lobbyId.substring(0, 8)}...
+              Playground
             </h2>
             <p className="text-blue-100 mt-2">
-              Host: {lobby.owner}
+              Leader: {lobby.owner}
             </p>
           </div>
           
           <div className="p-6 text-white">
             <div className="flex flex-col md:flex-row gap-6">
               {/* Members Section */}
-              <div className="flex-1">
+              <div className="flex-1 border border-white/10 rounded-xl p-3">
                 <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -189,31 +197,75 @@ export default function LobbyPage() {
                 <div className="bg-[#0a0a0a] rounded-lg p-4 max-h-64 overflow-y-auto">
                   <ul className="space-y-2">
                     {lobby.members.map((member, index) => (
-                      <li key={index} className="flex items-center p-3 bg-[#0a0a0a] rounded-lg shadow-sm">
-                        <div className="bg-[#0a0a0a] rounded-full p-2 mr-3">
+                      <div key={index}>
+                      <li onContextMenu={(e) => handleContextMenu(e, member)} className="flex items-center border border-white/10 p-3 bg-[#0a0a0a] rounded-lg shadow-sm">
+                        <div className="bg-[#0a0a0a] border border-white/10 rounded-full p-2 mr-3">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         </div>
-                        <div className="flex-1">
-                          <span className="font-medium text-white">{member.name}</span>
+                        <div className="w-full flex justify-between">
+                          <div className='flex flex-col'>
+                            <span className="font-medium text-white">{member.member.username}</span>
+                            <span className="text-xs text-white/50">{member.member.email}</span>
+                          </div>
                           <div className="flex items-center gap-2 mt-1">
-                            {member.name === user?.email && (
+                            {member.member._id === user?._id && (
                               <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">You</span>
                             )}
-                            {member.name === lobby.owner && (
+                            {member.member.email === lobby.owner && (
                               <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full">Host</span>
                             )}
                           </div>
                         </div>
                       </li>
+
+                      {contextMenu && (
+        <div
+          className="absolute bg-[#1a1a1a] text-white text-sm border border-white/10 rounded-lg shadow-lg p-2 z-50"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+
+          {user && user?._id === selectedMember && (
+            <button
+            className="block px-3 py-1 hover:bg-white/10 rounded w-full text-left"
+            onClick={() => {
+              alert(`View profile of ${member.member.username}`);
+              setContextMenu(null);
+            }}
+          >
+            Leave
+          </button>
+          )}
+            <button
+            className="block px-3 py-1 hover:bg-white/10 rounded w-full text-left"
+            onClick={() => {
+              alert(`View profile of ${member.member.username}`);
+              setContextMenu(null);
+            }}
+          >
+            Make Leader
+          </button>
+          <button
+            className="block px-3 py-1 hover:bg-white/10 rounded w-full text-left"
+            onClick={() => {
+              alert(`View profile of ${member.member.username}`);
+              setContextMenu(null);
+            }}
+          >
+            Remove
+          </button>
+        </div>
+      )}
+      </div>
+
                     ))}
                   </ul>
                 </div>
               </div>
               
               {/* Friends Section */}
-              <div className="flex-1">
+              <div className="flex-1 border border-white/10 p-3 rounded-xl">
                 <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -221,27 +273,32 @@ export default function LobbyPage() {
                   Invite Friends
                 </h3>
                 <div className="bg-[#0a0a0a] rounded-lg p-4 max-h-64 overflow-y-auto">
-                  {friends.filter(friend => !lobby.members.includes(friend)).length === 0 ? (
+                  {notInLobby?.length === 0 ? (
                     <div className="text-center p-4 text-white">
                       All your friends are already in the lobby or you have no friends to invite.
                     </div>
                   ) : (
                     <ul className="space-y-2">
-                      {friends
-                        .filter(friend => !lobby.members.includes(friend))
-                        .map((friend, index) => (
-                          <li key={index} className="flex items-center justify-between p-3 bg-[#0a0a0a] rounded-lg shadow-sm">
+                      {notInLobby?.map((friend, index) => (
+                          <li key={index} className="relative flex items-center justify-between p-3 bg-[#0a0a0a] border border-white/10 rounded-lg shadow-sm">
+                            {onlineFriends.includes(friend._id) && 
+                              <div className='bg-green-600 rounded-full absolute top-0 right-0 w-3 h-3'></div>
+                            }
                             <div className="flex items-center">
-                              <div className="bg-[#0a0a0a] rounded-full p-2 mr-3">
+                              <div className="bg-[#0a0a0a] border border-white/10 rounded-full p-2 mr-3">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                               </div>
-                              <span className="font-medium text-white">{friend}</span>
+                              <div className='flex flex-col'>
+                                <span className="font-medium text-white">{friend.username}</span>
+                                <span className="text-xs text-white/50">{friend.email}</span>
+                              </div>
                             </div>
-                            <button 
-                              onClick={() => inviteFriend(friend)}
-                              className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-all transform hover:scale-105 flex items-center"
+                            <button
+                              disabled={!onlineFriends.includes(friend._id)} 
+                              onClick={() => inviteFriend(friend._id)}
+                              className={`px-3 py-1 ${onlineFriends.includes(friend._id) ? 'bg-green-500 text-white hover:bg-green-600 transition-all transform hover:scale-105' : 'bg-slate-300 text-black'}  rounded-md  flex items-center`}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

@@ -2,7 +2,6 @@
 import React from "react";
 import { useEffect, useState, useContext } from "react";
 import axios from "axios";
-import { io } from "socket.io-client";
 import { useRouter } from "next/navigation";
 import { UserDataContext } from "@/context/UserContext";
 import { LobbyDataContext } from "@/context/LobbyContext";

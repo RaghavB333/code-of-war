@@ -1,4 +1,5 @@
 import Problem from "@/models/problems";
+import Playground from "@/models/playground";
 import connectDB from "@/lib/mongoose";
 
 export async function GET(req) {
@@ -7,28 +8,42 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url, `http://localhost:3000`);
     console.log("searchParams",searchParams)
     
-    let difficulty = searchParams.get('difficulty');
-    const no = parseInt(searchParams.get('no'));
-    console.log("Request URL:", difficulty,no);
+    const lobby = searchParams.get('lobby');
+    console.log("Lobby :", lobby);
     await connectDB();
 
 
-     let problems = [];
-     console.log(difficulty,no);
-    if(difficulty && no)
-    {
-      console.log("Difficulty:", difficulty,no);
-      const count = parseInt(no);
+    let problems = [];
 
-      if(difficulty === "Give Me Story")
-      {
-        difficulty = "easy";
+    if(lobby)
+    {
+      const playground = await Playground.findById(lobby);
+
+      // console.log("ply : ", playground);
+
+      const getPrombles = async() => {
+        const ply = await Playground.findById(lobby).populate({
+          path: 'problemsData.problems',
+          select: 'title difficulty'
+        });
+        console.log("ply data : ", ply.problemsData);
+        return ply.problemsData.problems;
       }
-  
-      const query = difficulty
-        ? { difficulty }
-        : {}; // if difficulty is not provided, return all
-        problems = await Problem.find(query).limit(count);
+
+      if(playground.problemsData?.problems?.length > 0){
+        problems = await getPrombles();
+      }
+      else if(playground.problemsData?.count){
+        const count = playground.problemsData?.count;
+        const difficulty = playground.problemsData?.difficulty;
+        const ply = await Problem.aggregate([{ $match: { difficulty: difficulty } },{ $sample: { size: count } }]);
+        console.log("problems : ", ply);
+        ply.forEach((e)=>{
+          playground.problemsData.problems.push(e._id);
+        })
+        playground.save();
+        problems = await getPrombles();
+      }
     }
     else{
        problems = await Problem.find(); // This returns an array of all problems

@@ -2,9 +2,10 @@ const mongoose = require('mongoose');
 
 const playgroundSchema = new mongoose.Schema(
     {
-        id: { type: String, required: true, unique: true },
-        members: { type: [{name: String, totalPoints: Number}], default: [] },
         owner: { type: String, required: true },
+        members: [{member: { type: mongoose.Schema.Types.ObjectId, ref: "User" },totalPoints: Number}],
+        problemsData: { type: { count: Number, difficulty: String, problems: [{type: mongoose.Schema.Types.ObjectId,
+            ref: "Problem"}]}},
         status: { type: String, enum: ['waiting', 'active', 'completed'], default: 'waiting' },
         sessionend:{ type: Number,default: null},
         startedAt: { type: Date, default: Date.now },

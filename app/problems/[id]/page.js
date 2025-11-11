@@ -2,7 +2,6 @@
 import React from "react";
 import { useState, useEffect} from "react";
 import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
 
 
 const ProblemsPage = ({params}) => {
@@ -10,21 +9,12 @@ const ProblemsPage = ({params}) => {
   const [loading, setLoading] = useState(true); // New state for loading status
   const router = useRouter();
 
-  const searchParams = useSearchParams();
-    const difficulty = searchParams.get("difficulty");
-    const no = searchParams.get("no");
-    const sessionend = searchParams.get("sessionend");
-    const startedAt = searchParams.get("startedAt");
-    console.log("startedAt:", startedAt);
-
-    console.log("Difficulty:", difficulty, no);
-
     const { id } = React.use(params);
     console.log("ID:", id );
 
   useEffect(() => {
     // Fetch problems from the API
-    fetch(`/api/problems?difficulty=${difficulty}&no=${no}`)
+    fetch(`/api/problems?lobby=${id}`)
       .then((response) => response.json())
       .then((data) => {
         setProblems(data);
@@ -45,16 +35,28 @@ const ProblemsPage = ({params}) => {
 
   const getDifficultyColor = (difficulty) => {
     switch (difficulty.toLowerCase()) {
-      case "give me story":
+      case "easy":
         return "text-green-500";
-      case "give me balanced":
+      case "medium":
         return "text-orange-500";
-      case "give me no mercy":
+      case "hard":
         return "text-red-500";
       default:
         return "text-gray-500";
     }
   };
+  const getDifficuty = (difficulty) => {
+    switch (difficulty){
+      case "easy":
+        return "Give Me Story";
+      case "medium":
+        return "Give Me Balanced";
+      case "hard":
+        return "Give Me No Mercy";
+      default:
+        return "text-gray-500";
+    }
+  }
   return (
     <div className="min-h-screen bg-[#0a0a0a] p-6">
       <div className="max-w-4xl mx-auto bg-[#0a0a0a] shadow-md rounded-lg p-6">
@@ -75,7 +77,7 @@ const ProblemsPage = ({params}) => {
                 >
                   {problem.title}
                   <span className={`relative right-0 ${getDifficultyColor(problem.difficulty)}`}>
-                    {problem.difficulty}
+                    {getDifficuty(problem.difficulty)}
                   </span>
                 </button>
               </li>
