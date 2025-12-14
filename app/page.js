@@ -107,7 +107,7 @@ export default function Home() {
   }, [socket, user && user.email, router]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-white max-w-screen overflow-x-hidden">
       {/* <AcceptInvite/> */}
       <main>
         {/* Hero Section */}
@@ -257,13 +257,13 @@ export default function Home() {
         {/* Features Section */}
         <section
           id="features"
-          className="max-lg:pt-6 lg:py-8 px-6 bg-C text-foreground transition-all"
+          className="max-lg:pt-6 lg:py-8 px-6 text-foreground transition-all"
         >
-          <div className="mx-auto text-center text-white">
+          <div className="text-center text-white">
             <h1 className="tracking-tight inline font-semibold from-[#5EA2EF] to-[#0072F5] text-4xl lg:text-5xl bg-clip-text text-transparent bg-gradient-to-b">
               Key Features
             </h1>
-            <div className="grid lg:grid-cols-3 gap-24 mt-10 mx-10 md:mx-20 lg:mx-0 lg:ml-48">
+            <div className="grid lg:grid-cols-3 gap-24 mt-10 mx-10 md:mx-20">
 
 
               <motion.div
