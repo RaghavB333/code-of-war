@@ -115,7 +115,7 @@ export default function Home() {
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
-          className="py-48 flex flex-col justify-center items-center text-center text-white mx-6 max-w-[100vw]"
+          className="py-10 md:py-24 flex flex-col justify-center items-center text-center text-white mx-6 max-w-[100vw]"
         >
           <h2 className="text-5xl font-extrabold mb-4">
             Welcome to{" "}
@@ -149,9 +149,9 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
-            className="min-h-screen bg-[#0a0a0a] py-10"
+            className="min-h-screen bg-[#0a0a0a] py-0 lg:py-10"
           >
-            <div className="min-h-screen bg-[#0a0a0a] py-10 flex justify-center items-center text-center">
+            <div className="min-h-screen bg-[#0a0a0a] flex justify-center items-center text-center">
               <div className="container mx-auto px-6 lg:px-20">
                 <h1 className="tracking-tight inline font-semibold from-[#6FEE8D] to-[#17c964] text-4xl lg:text-6xl bg-clip-text text-transparent bg-gradient-to-b">
                   About <span className={customFont.className}>CODE OF WAR</span>
@@ -257,13 +257,13 @@ export default function Home() {
         {/* Features Section */}
         <section
           id="features"
-          className="py-16 px-6 bg-C text-foreground transition-all"
+          className="max-lg:pt-6 lg:py-8 px-6 bg-C text-foreground transition-all"
         >
           <div className="mx-auto text-center text-white">
             <h1 className="tracking-tight inline font-semibold from-[#5EA2EF] to-[#0072F5] text-4xl lg:text-5xl bg-clip-text text-transparent bg-gradient-to-b">
               Key Features
             </h1>
-            <div className="grid md:grid-cols-3 gap-24 max-w-7xl mt-10 mx-10 md:ml-48">
+            <div className="grid lg:grid-cols-3 gap-24 mt-10 mx-10 md:mx-20 lg:mx-0 lg:ml-48">
 
 
               <motion.div
