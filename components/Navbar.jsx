@@ -8,17 +8,17 @@ import { UserDataContext } from '@/context/UserContext'
 import { signOut } from "next-auth/react";
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
-    const {user, setUser} = useContext(UserDataContext);
+    const { user, setUser } = useContext(UserDataContext);
     const router = useRouter();
 
-    const logOut = async() => {
-        try{
-            const response = await axios.get('/api/logout', {withCredentials: true});
-            if(response.status === 200){
+    const logOut = async () => {
+        try {
+            const response = await axios.get('/api/logout', { withCredentials: true });
+            if (response.status === 200) {
                 setUser(null);
                 router.push('/');
             }
-        }catch(error){
+        } catch (error) {
             console.log(error);
         }
     }
@@ -49,21 +49,22 @@ export default function Navbar() {
                     <Link href="/LeaderBoard" className="hover:text-yellow-400">
                         Leaderboard
                     </Link>
+
                     {!user ? (
                         <>
-                        <Link href="/Signup" className="hover:text-yellow-400">
-                            Signup
-                        </Link>
-                        <Link href="/Login" className="hover:text-yellow-400">
-                            Login
-                        </Link>
-                    </>
+                            <Link href="/Signup" className="hover:text-yellow-400">
+                                Signup
+                            </Link>
+                            <Link href="/Login" className="hover:text-yellow-400">
+                                Login
+                            </Link>
+                        </>
                     ) : (
-                        <button onClick={()=> {logOut(); signOut({ callbackUrl: "/" })}} className="hover:text-red-400">
+                        <button onClick={() => { logOut(); signOut({ callbackUrl: "/" }) }} className="hover:text-red-400">
                             Logout
                         </button>
                     )}
-                      
+
                 </div>
 
                 {/* Mobile Hamburger Icon */}
@@ -91,39 +92,29 @@ export default function Navbar() {
             {/* Mobile Menu */}
             {isOpen && (
                 <div className="md:hidden bg-[#0a0a0a]">
-
-                    <Link href="/Signup" className=" block px-4 py-2 hover:bg-gray-700">
-                        Signup
-                    </Link>
-                    <Link href="/Login" className=" block px-4 py-2 hover:bg-gray-700">
-                        Login
-                    </Link>
-                    <Link href="/problems" className=" block px-4 py-2 hover:bg-gray-700">
+                    <Link href="/problems" className=" block px-4 py-2">
                         Problems
                     </Link>
-                    <Link href="/Playground" className=" block px-4 py-2 hover:bg-gray-700">
+                    <Link href="/Playground" className=" block px-4 py-2">
                         Playground
                     </Link>
-                    <Link href="/Dashboard" className=" block px-4 py-2 hover:bg-gray-700">
+                    <Link href="/Dashboard" className=" block px-4 py-2">
                         Dashboard
                     </Link>
-                    <Link href="/LeaderBoard" className=" block px-4 py-2 hover:bg-gray-700">
+                    <Link href="/LeaderBoard" className=" block px-4 py-2">
                         Leaderboard
                     </Link>
-                    <Link href="/about" className=" block px-4 py-2 hover:bg-gray-700">
-                        About
-                    </Link>
-                                          {!user ? (
+                    {!user ? (
                         <>
-                        <Link href="/Signup" className="hover:text-yellow-400">
-                            Signup
-                        </Link>
-                        <Link href="/Login" className="hover:text-yellow-400">
-                            Login
-                        </Link>
-                    </>
+                            <Link href="/Signup" className="block px-4 py-2 ho">
+                                Signup
+                            </Link>
+                            <Link href="/Login" className="block px-4 py-2 ho">
+                                Login
+                            </Link>
+                        </>
                     ) : (
-                        <button onClick={logOut} className="hover:text-red-400">
+                        <button onClick={logOut} className="block px-4 py-2">
                             Logout
                         </button>
                     )}
