@@ -48,13 +48,14 @@ export async function POST(request) {
     await connectDB();
 
     // Parse the incoming JSON request body
-    const { username, problemId, code, language, results, islobby } =
-      await request.json();
-    console.log(username, problemId, code, language, results);
+    const { userId, problemId, code, language, results, islobby } = await request.json();
+    console.log(userId, problemId, code, language, results, islobby);
 
     const problem = await Problem.findOne({ _id: problemId });
+    const user = await userModel.findById(userId);
+    console.log('User : ', user);
 
-    console.log(problem);
+    // console.log(problem);
 
     if (!problem) {
       return new Response(JSON.stringify({ message: "Problem not found" }), {
@@ -64,7 +65,7 @@ export async function POST(request) {
     const difficulty = problem.difficulty;
 
     const isexist = await Submissions.findOne({
-      username: username,
+      username: user.username,
       problemId: problemId,
       "results.allPassed": true,
     });
@@ -74,35 +75,38 @@ export async function POST(request) {
     if (!isexist) {
       if (difficulty === "easy") {
         if (islobby) {
-          await playground.updateOne(
-            { id: islobby, "members.name": username },
-            { $set: { "members.$.totalPoints": 50 } }
+          await playground.findOneAndUpdate(
+              { _id: islobby, "members.member": userId },   // filter
+              { $set: { "members.$.totalPoints": 50 } },    // update
+              { new: true }
           );
         }
-        await userModel.updateOne(
-          { email: username },
+        await userModel.findByIdAndUpdate(
+          userId,
           { $inc: { easyproblemssolved: 1 } }
         );
       } else if (difficulty === "medium") {
         if (islobby) {
-          await playground.updateOne(
-            { id: islobby, "members.name": username },
-            { $set: { "members.$.totalPoints": 100 } }
+          await playground.findOneAndUpdate(
+              { _id: islobby, "members.member": userId },   // filter
+              { $set: { "members.$.totalPoints": 100 } },    // update
+              { new: true }
           );
         }
-        await userModel.updateOne(
-          { email: username },
+        await userModel.findByIdAndUpdate(
+          userId,
           { $inc: { mediumproblemssolved: 1 } }
         );
       } else {
         if (islobby) {
-          await playground.updateOne(
-            { id: islobby, "members.name": username },
-            { $set: { "members.$.totalPoints": 200 } }
+            await playground.findOneAndUpdate(
+              { _id: islobby, "members.member": userId },   // filter
+              { $set: { "members.$.totalPoints": 200 } },    // update
+              { new: true }
           );
         }
-        await userModel.updateOne(
-          { email: username },
+        await userModel.findByIdAndUpdate(
+          userId,
           { $inc: { hardproblemssolved: 1 } }
         );
       }
@@ -141,25 +145,25 @@ export async function POST(request) {
       //     }
       //     await user.save();
 
-      const user = await userModel.findOne({ email: username });
+      
 
-const now = new Date();
-const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // today at 00:00
-const yesterday = new Date(today);
-yesterday.setDate(today.getDate() - 1); // yesterday at 00:00
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // today at 00:00
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1); // yesterday at 00:00
 
-// Last submission date normalized to start of the day
-const lastDate = user.streak.lastSubmissionDate
-  ? new Date(user.streak.lastSubmissionDate.getFullYear(), user.streak.lastSubmissionDate.getMonth(), user.streak.lastSubmissionDate.getDate())
-  : null;
+    // Last submission date normalized to start of the day
+    const lastDate = user.streak.lastSubmissionDate
+      ? new Date(user.streak.lastSubmissionDate.getFullYear(), user.streak.lastSubmissionDate.getMonth(), user.streak.lastSubmissionDate.getDate())
+      : null;
 
-if (!lastDate || lastDate < yesterday) {
-  // Missed a day or first submission
-  user.streak.current = 1;
-} else if (lastDate.getTime() === yesterday.getTime()) {
-  // Submitted yesterday → streak continues
-  user.streak.current += 1;
-}
+    if (!lastDate || lastDate < yesterday) {
+      // Missed a day or first submission
+      user.streak.current = 1;
+    } else if (lastDate.getTime() === yesterday.getTime()) {
+      // Submitted yesterday → streak continues
+      user.streak.current += 1;
+    }
 
 // Update max streak
 user.streak.max = Math.max(user.streak.max, user.streak.current);
@@ -178,25 +182,27 @@ await user.save();
     } else {
       if (difficulty === "easy" && islobby) {
         await playground.updateOne(
-          { id: islobby, "members.name": username },
+          { id: islobby, "members.member": userId },
           { $inc: { "members.$.totalPoints": 50 } }
         );
       } else if (difficulty === "medium" && islobby) {
-        await playground.updateOne(
-          { id: islobby, "members.name": username },
-          { $inc: { "members.$.totalPoints": 100 } }
-        );
+          await playground.findOneAndUpdate(
+              { _id: islobby, "members.member": userId },   // filter
+              { $set: { "members.$.totalPoints": 100 } },    // update
+              { new: true }
+          );
       } else if (difficulty === "hard" && islobby) {
-        await playground.updateOne(
-          { id: islobby, "members.name": username },
-          { $inc: { "members.$.totalPoints": 200 } }
-        );
+          await playground.findOneAndUpdate(
+              { _id: islobby, "members.member": userId },   // filter
+              { $set: { "members.$.totalPoints": 200 } },    // update
+              { new: true }
+          );
       }
     }
 
     // Create a new submission
     const newSubmission = new Submissions({
-      username,
+      username: user.username,
       code,
       language,
       results,

@@ -1,12 +1,13 @@
 "use client";
 import dynamic from "next/dynamic";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import Link from "next/link";
 import AnalysisChart from "@/components/Chart";
 import { UserDataContext } from "@/context/UserContext";
 import UserProtectWrapper from '@/components/UserProtectWrapper'
 import { useSearchParams } from "next/navigation";
+import { Code, Play, Send, BarChart3, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -26,6 +27,8 @@ const wrapCode = (language, userCode, languageWrappers) => {
 };
 
 const CodeEditorPage = ({ params }) => {
+  const [leftWidth, setLeftWidth] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("");
   const [testCases, setTestCases] = useState([]);
@@ -42,6 +45,7 @@ const CodeEditorPage = ({ params }) => {
   const [AnalysisCode, setAnalysisCode] = useState("")
   const [analysisTC, setanalysisTC] = useState()
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const containerRef = useRef(null);
 
 
 
@@ -51,6 +55,35 @@ const CodeEditorPage = ({ params }) => {
   const islobby = searchParams.get("lobby");
   console.log("lobby status: ", islobby);
 
+
+
+    useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging || !containerRef.current) return;
+      
+      const container = containerRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+      
+      if (newWidth > 20 && newWidth < 80) {
+        setLeftWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
 
 
@@ -236,11 +269,10 @@ const CodeEditorPage = ({ params }) => {
 
 
   const submitSolution = async () => {
-    console.log("user email ", user.email);
+    console.log("user email ", user._id);
     if (results) {
-      console.log("fjdjdfjproblemid", problemId);
       const submission = {
-        username: user.email,
+        userId: user._id,
         problemId: problemId,
         code,
         language,
@@ -266,9 +298,305 @@ const CodeEditorPage = ({ params }) => {
 
   return (
     <UserProtectWrapper>
-      <div className="min-h-screen flex flex-col lg:flex-row">
 
-        {/* Left Panel: Problem Description */}
+
+
+    <div className="min-h-screen bg-background">
+      <div ref={containerRef} className="h-screen flex flex-col">
+        {/* Header */}
+        {/* <div className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50 px-6 py-4 flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg">
+              <Code className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              CodeChallenge
+            </h1>
+          </div>
+          <a
+            href="/submissions"
+            className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105"
+          >
+            View Submissions
+          </a>
+        </div> */}
+
+        {/* Main Content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Panel: Problem Description */}
+          <div 
+            className="bg-background backdrop-blur-sm overflow-y-auto"
+            style={{ width: `${leftWidth}%` }}
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-2xl font-bold text-white">{problemTitle}</h2>
+                    <span className="px-3 py-1 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-sm font-semibold rounded-full shadow-lg">
+                      Easy
+                    </span>
+                  </div>
+                  <Link
+                    href="/submissions"
+                    className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md transition-transform transform hover:scale-105 w-full sm:w-auto text-center"
+                  >
+                    Submissions
+                  </Link>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {/* Description */}
+                <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 shadow-xl">
+                  <h3 className="text-lg font-semibold text-indigo-400 mb-3">Description</h3>
+                  <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{problemDesc}</p>
+                </div>
+
+                {/* Examples */}
+                <div>
+                  <h3 className="text-lg font-semibold text-indigo-400 mb-4">Examples</h3>
+                  <div className="space-y-4">
+                    {examples.map((example, index) => (
+                      <div key={index} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 shadow-lg hover:border-indigo-500/50 transition-all duration-200">
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <span className="text-sm font-semibold text-emerald-400 min-w-[60px]">Input:</span>
+                            <code className="text-sm font-mono bg-slate-900/70 px-3 py-1.5 rounded-lg text-slate-200 flex-1">
+                              {example.input}
+                            </code>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-sm font-semibold text-purple-400 min-w-[60px]">Output:</span>
+                            <code className="text-sm font-mono bg-slate-900/70 px-3 py-1.5 rounded-lg text-slate-200 flex-1">
+                              {example.output}
+                            </code>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Resizer */}
+          <div
+            className="w-1 bg-slate-700/50 hover:bg-indigo-500 cursor-col-resize transition-colors relative group"
+            onMouseDown={() => setIsDragging(true)}
+          >
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex gap-0.5">
+                <div className="w-1 h-8 bg-white rounded-full"></div>
+                <div className="w-1 h-8 bg-white rounded-full"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel: Code Editor */}
+          <div 
+            className=" backdrop-blur-sm overflow-y-auto flex flex-col"
+            style={{ width: `${100 - leftWidth}%` }}
+          >
+            <div className="p-6 flex-1 flex flex-col">
+              {/* Editor Controls */}
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <select
+                  onChange={handleLanguageChange}
+                  value={language}
+                  className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer hover:bg-slate-750"
+                >
+                  <option value="" disabled>Select Language</option>
+                  {supportedLanguages.map((lang) => (
+                    <option key={lang} value={lang}>
+                      {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                    </option>
+                  ))}
+                </select>
+                
+                <button
+                  onClick={runTestCases}
+                  disabled={isRunning}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {isRunning ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Running...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4" />
+                      Run Tests
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Code Editor */}
+
+                        {language && (
+            <MonacoEditor
+              height="70vh"
+              language={language}
+              value={code}
+              onChange={(value) => setCode(value)}
+              options={{
+                fontSize: 14,
+                minimap: { enabled: false },
+                theme: "vs-dark",
+              }}
+            />
+          )}
+              {/* {language && (
+                <div className="flex-1 bg-slate-950 rounded-xl border border-slate-700/50 shadow-2xl overflow-hidden mb-4">
+                  <textarea
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    className="w-full h-full p-4 bg-slate-950 text-slate-200 font-mono text-sm focus:outline-none resize-none"
+                    placeholder="Write your code here..."
+                    style={{ minHeight: '400px' }}
+                  />
+                </div>
+              )} */}
+
+              {/* Test Results */}
+              {results && hasRunTests && (
+                <div className="space-y-4 mt-3">
+                  <div className="bg-background rounded-xl p-5 border border-slate-700/50 shadow-xl">
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-indigo-400" />
+                      Test Results
+                    </h3>
+                    
+                    {isRunning ? (
+                      <div className="flex items-center gap-3 text-slate-400">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Running test cases...</span>
+                      </div>
+                    ) : results.allPassed ? (
+                      <div className="flex items-center gap-3 text-green-400">
+                        <CheckCircle className="w-6 h-6" />
+                        <span className="font-semibold text-lg">All test cases passed!</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 text-red-400 mb-3">
+                          <XCircle className="w-6 h-6" />
+                          <span className="font-semibold">Test case failed</span>
+                        </div>
+                        <div className="space-y-2 bg-slate-900/50 rounded-lg p-4">
+                          <div>
+                            <span className="text-sm font-semibold text-slate-400">Input:</span>
+                            <code className="ml-2 text-sm font-mono text-slate-200">
+                              {JSON.stringify(results.inputs)}
+                            </code>
+                          </div>
+                          <div>
+                            <span className="text-sm font-semibold text-slate-400">Expected:</span>
+                            <code className="ml-2 text-sm font-mono text-green-400">
+                              {results.expectedOutput}
+                            </code>
+                          </div>
+                          <div>
+                            <span className="text-sm font-semibold text-slate-400">Actual:</span>
+                            <code className="ml-2 text-sm font-mono text-red-400">
+                              {results.actualOutput}
+                            </code>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  {results.allPassed && (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={submitSolution}
+                        disabled={hasSubmitted}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
+                          hasSubmitted
+                            ? "bg-slate-700 text-slate-400 cursor-not-allowed"
+                            : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg transform hover:scale-105"
+                        }`}
+                      >
+                        <Send className="w-4 h-4" />
+                        {hasSubmitted ? "Submitted ✓" : "Submit Solution"}
+                      </button>
+
+                      <button
+                        onClick={analyzeCode}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105"
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                        Analyze Code
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Analysis Results */}
+                  {isAnalyzing ? (
+                    <div className="flex justify-center items-center py-8">
+                      <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+                    </div>
+                  ) : analysisResults && (
+                    <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl p-6 border border-slate-700/50 shadow-xl">
+                      <h3 className="text-lg font-semibold text-white mb-4">Code Analysis</h3>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-slate-900/50 rounded-lg p-4">
+                            <div className="text-sm text-slate-400 mb-1">Time Complexity</div>
+                            <div className="text-xl font-bold text-indigo-400">{analysisResults.timeComplexity}</div>
+                          </div>
+                          <div className="bg-slate-900/50 rounded-lg p-4">
+                            <div className="text-sm text-slate-400 mb-1">Space Complexity</div>
+                            <div className="text-xl font-bold text-purple-400">{analysisResults.spaceComplexity}</div>
+                          </div>
+                        </div>
+                        
+                        {['performance', 'readability', 'efficiency'].map((metric) => (
+                          <div key={metric}>
+                            <div className="flex justify-between text-sm mb-2">
+                              <span className="text-slate-300 capitalize">{metric}</span>
+                              <span className="text-white font-semibold">{analysisResults[metric]}%</span>
+                            </div>
+                            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                                style={{ width: `${analysisResults[metric]}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      {/* <div className="min-h-screen flex flex-col lg:flex-row">
+
+        
         <div className="w-full lg:w-1/2 bg-background p-4 sm:p-6 overflow-y-auto text-white max-h-[50vh] lg:max-h-none">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
             <div className="flex items-center">
@@ -298,7 +626,7 @@ const CodeEditorPage = ({ params }) => {
               <h2 className="text-lg font-semibold text-white mb-4">Examples</h2>
               <div className="space-y-4">
                 {examples.map((example, index) => (
-                  <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-200">
+                  <div key={index} className="bg-gray-800 max-w-80 rounded-lg p-4 border border-gray-200">
                     <div className="space-y-2">
                       <div>
                         <span className="text-sm font-medium text-white">Input:</span>
@@ -320,7 +648,7 @@ const CodeEditorPage = ({ params }) => {
           </div>
         </div>
 
-        {/* Right Panel: Code Editor */}
+       
         <div className="w-full lg:w-1/2 bg-background text-white p-4 sm:p-6 flex flex-col overflow-y-auto max-h-[50vh] lg:max-h-none">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
             <select
@@ -344,7 +672,7 @@ const CodeEditorPage = ({ params }) => {
 
           {language && (
             <MonacoEditor
-              height="40vh"
+              height="70vh"
               language={language}
               value={code}
               onChange={(value) => setCode(value)}
@@ -356,7 +684,7 @@ const CodeEditorPage = ({ params }) => {
             />
           )}
 
-          {/* Test Case Results */}
+         
           {results && hasRunTests && (
             <>
               <div className="mt-4 bg-gray-800 p-4 rounded-lg">
@@ -376,7 +704,7 @@ const CodeEditorPage = ({ params }) => {
                 ) : null}
               </div>
 
-              {/* Submit & Analyze Buttons */}
+          
               {results.allPassed && (
                 <>
                   <button
@@ -401,7 +729,7 @@ const CodeEditorPage = ({ params }) => {
                 </>
               )}
 
-              {/* Analysis Chart */}
+              
               {isAnalyzing ? (
                 <div className="mt-8 flex justify-center items-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 border-solid"></div>
@@ -412,12 +740,10 @@ const CodeEditorPage = ({ params }) => {
                   <AnalysisChart data={analysisResults} />
                 </div>
               )}
-
-
             </>
           )}
         </div>
-      </div>
+      </div> */}
     </UserProtectWrapper>
   );
 

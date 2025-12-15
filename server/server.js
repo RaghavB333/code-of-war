@@ -204,6 +204,15 @@ io.on('connection', async (socket) => {
     }
   });
 
+  // Fetch Lobby
+  socket.on('fetch-lobby', async({lobbyId}) => {
+    const lobby = await Playground.findById(lobbyId).populate({
+        path: 'members.member',
+        select: 'username email'
+      });
+      io.to(lobbyId).emit('lobby-updated', lobby);
+  })
+
 
 // Rejoin lobby
   socket.on('rejoin-lobby', ({lobbyId}) =>{

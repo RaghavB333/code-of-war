@@ -13,7 +13,7 @@ const LeaderBoard = ({ params }) => {
     const getPlayground = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`/api/createplayground?id=${id}`);
+            const response = await axios.get(`/api/playground/createplayground?id=${id}`);
             const data = response.data;
             setPlayground(data.lobby);
             console.log("playground : ", data.lobby);
@@ -70,9 +70,6 @@ const LeaderBoard = ({ params }) => {
                         <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
                             🏆 LeaderBoard
                         </h1>
-                        <p className="text-gray-600 text-lg">
-                            Current standings for Playground: {playground?.id || 'Loading...'}
-                        </p>
                         <div className="w-24 h-1 bg-gradient-to-r from-purple-500 to-blue-500 mx-auto mt-4 rounded-full"></div>
                     </div>
 

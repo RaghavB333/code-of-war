@@ -84,27 +84,27 @@ export default function Home() {
     }
   }, [user, socket]);
 
-  useEffect(() => {
-    if (socket != null) {
+  // useEffect(() => {
+  //   if (socket != null) {
 
-      const handleInvite = (data) => {
-        console.log("received invite", data);
-        if (confirm(`${data.inviterEmail} invited you to a lobby`)) {
-          socket.emit('accept-invite', {
-            lobbyId: data.lobbyId,
-            id: user._id
-          }, (response) => {
-            if (response.success) {
-              router.push(`/lobby/${response.lobbyId}`);
-            }
-          });
-        }
-      };
+  //     const handleInvite = (data) => {
+  //       console.log("received invite", data);
+  //       if (confirm(`${data.inviterEmail} invited you to a lobby`)) {
+  //         socket.emit('accept-invite', {
+  //           lobbyId: data.lobbyId,
+  //           id: user._id
+  //         }, (response) => {
+  //           if (response.success) {
+  //             router.push(`/lobby/${response.lobbyId}`);
+  //           }
+  //         });
+  //       }
+  //     };
 
-      socket.on('receive-invite', handleInvite);
-      return () => socket.off('receive-invite', handleInvite);
-    }
-  }, [socket, user && user.email, router]);
+  //     socket.on('receive-invite', handleInvite);
+  //     return () => socket.off('receive-invite', handleInvite);
+  //   }
+  // }, [socket, user && user.email, router]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">

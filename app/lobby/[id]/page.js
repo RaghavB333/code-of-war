@@ -41,7 +41,7 @@ export default function LobbyPage() {
     const getPlaygroundMembers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/createplayground?id=${lobbyId}`);
+        const response = await axios.get(`/api/playground/createplayground?id=${lobbyId}`);
         const data = response.data;
         setLobby(data.lobby);
         console.log("lobby : ", data);
@@ -105,6 +105,10 @@ export default function LobbyPage() {
     }
   };
 
+  const fetchLobby = () => {
+    socket.emit('fetch-lobby',{lobbyId});
+  }
+
   const startLobby = () => {
     socket.emit('start-lobby', {
       lobbyId,
@@ -117,10 +121,20 @@ export default function LobbyPage() {
       socket.emit('rejoin-lobby', {lobbyId});
     }
   }
-
+  const [time, setTime] = useState(10);
   useEffect(()=>{
-    rejoinLobby();
-  },[user && user.email && socket])
+    // const isexist = lobby?.members?.find(member=> member.member._id == user._id);
+    // console.log("isexist : ", isexist);
+    if(lobby?.members?.find(member=> member.member._id == user._id)){
+      console.log("exist in the lobby");
+      rejoinLobby();
+    }
+    else{
+      if(lobby){
+        router.push('/');
+      }
+    }
+  },[user && user.email && socket && lobby])
 
 
   const [contextMenu, setContextMenu] = useState(null);
@@ -139,9 +153,31 @@ export default function LobbyPage() {
       x: e.pageX,
       y: e.pageY,
     });
-    console.log('selcted Id : ', member._id);
-    setSelectedMember(member._id);
+    console.log('selcted Id : ', member.member._id);
+    setSelectedMember(member.member._id);
   };
+
+  const makeLeader = async() => {
+    const response = await axios.put(`/api/playground/makeleader/${lobbyId}`, {selectedMember}, {withCredentials: true});
+    if(response.status == 200){
+      fetchLobby();
+      console.log(response.data);
+    }
+  }
+  
+  const removeFromLobby = async() => {
+    const response = await axios.put(`/api/playground/removefromlobby/${lobbyId}`, {selectedMember}, {withCredentials: true});
+    if(response.status == 200){
+      fetchLobby();
+    }
+  }
+
+  const leavePlayground = async() => {
+    const response = await axios.put(`/api/playground/leaveplayground/${lobbyId}`, {selectedMember}, {withCredentials: true});
+    if(response.status == 200){
+      fetchLobby();
+    }
+  }
 
   if (loading) {
     return (
@@ -222,39 +258,46 @@ export default function LobbyPage() {
 
                       {contextMenu && (
         <div
-          className="absolute bg-[#1a1a1a] text-white text-sm border border-white/10 rounded-lg shadow-lg p-2 z-50"
+          className={`absolute bg-[#1a1a1a] ${user?._id === selectedMember || user?.email === lobby.owner ? 'block' : 'hidden'} text-white text-sm border border-white/10 rounded-lg shadow-lg p-2 z-50`}
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
 
-          {user && user?._id === selectedMember && (
+          {user && user?._id === selectedMember ? (
             <button
             className="block px-3 py-1 hover:bg-white/10 rounded w-full text-left"
             onClick={() => {
-              alert(`View profile of ${member.member.username}`);
+              leavePlayground();
               setContextMenu(null);
             }}
           >
             Leave
           </button>
-          )}
-            <button
+          ) : (
+            <div>
+              {user && user.email === lobby.owner &&
+                <div>
+                  <button
             className="block px-3 py-1 hover:bg-white/10 rounded w-full text-left"
             onClick={() => {
-              alert(`View profile of ${member.member.username}`);
               setContextMenu(null);
+              makeLeader();
             }}
           >
             Make Leader
           </button>
-          <button
+           <button
             className="block px-3 py-1 hover:bg-white/10 rounded w-full text-left"
             onClick={() => {
-              alert(`View profile of ${member.member.username}`);
+              removeFromLobby();
               setContextMenu(null);
             }}
           >
             Remove
           </button>
+                </div>
+              }
+          </div>
+          )}
         </div>
       )}
       </div>

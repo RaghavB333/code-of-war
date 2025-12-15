@@ -83,13 +83,17 @@ import { LobbyDataContext } from "@/context/LobbyContext";
 import { UserDataContext } from "@/context/UserContext";
 import { X } from "lucide-react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 
 export default function AcceptInvite() {
   const { socket } = useContext(LobbyDataContext);
   const {user} = useContext(UserDataContext);
+  const router = useRouter();
 
   const [notifications, setNotifications] = useState([]);
   const [progressMap, setProgressMap] = useState({});
+  const [isLobbyInvite, setIsLobbyInvite] = useState(false);
+  const [lobbyId, setLobbyId] = useState('');
   const DURATION = 7000; // 7 seconds
 
   // 🔊 Keep one audio object and unlock it after first click
@@ -116,25 +120,39 @@ export default function AcceptInvite() {
   }, []);
 
       const handleAccept = async (senderEmail) => {
+        if(!isLobbyInvite){
           const data = {
               senderEmail: senderEmail,
               receiverEmail: user.email
           }
           const response = await axios.post('api/acceptrequest', data);
           console.log(response.data);
+        }
+        else{
+          socket.emit('accept-invite', {
+            lobbyId: lobbyId,
+            id: user._id
+          }, (response) => {
+            if (response.success) {
+              router.push(`/lobby/${response.lobbyId}`);
+            }
+          });
+        }
       }
 
 
       const handleDeny = async(senderEmail) => {
-        try{
-            const response = await axios.put('/api/denyrequest', {senderEmail: senderEmail}, {withCredentials:true});
-            if(response.status == 200){
-                console.log(response.data);
-                getFriends();
-                getnotifications();
-            }
-        }catch(error){
-            console.log(error);
+        if(!isLobbyInvite){
+          try{
+              const response = await axios.put('/api/denyrequest', {senderEmail: senderEmail}, {withCredentials:true});
+              if(response.status == 200){
+                  console.log(response.data);
+                  getFriends();
+                  // getnotifications();
+              }
+          }catch(error){
+              console.log(error);
+          }
         }
     }
 
@@ -167,9 +185,57 @@ export default function AcceptInvite() {
         }
       }, 100);
     });
+
+    const handleInvite = (data) => {
+      setIsLobbyInvite(true);
+      setLobbyId(data.lobbyId);
+      const id = Date.now();
+      const newNotification = { id, email: data.inviterEmail };
+
+      setNotifications((prev) => [...prev, newNotification]);
+      setProgressMap((prev) => ({ ...prev, [id]: 100 }));
+
+      // Play notification sound
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
+      }
+
+      // Progress countdown
+      let start = Date.now();
+      const interval = setInterval(() => {
+        let elapsed = Date.now() - start;
+        let percent = Math.max(0, 100 - (elapsed / DURATION) * 100);
+        setProgressMap((prev) => ({ ...prev, [id]: percent }));
+
+        if (percent <= 0) {
+          clearInterval(interval);
+          handleClose(id);
+        }
+      }, 100);
+
+
+
+        // console.log("received invite", data);
+        // if (confirm(`${data.inviterEmail} invited you to a lobby`)) {
+        //   socket.emit('accept-invite', {
+        //     lobbyId: data.lobbyId,
+        //     id: user._id
+        //   }, (response) => {
+        //     if (response.success) {
+        //       router.push(`/lobby/${response.lobbyId}`);
+        //     }
+        //   });
+        // }
+      };
+
+      socket.on('receive-invite', handleInvite);
+
   }, [socket]);
 
   const handleClose = (id) => {
+    setIsLobbyInvite(false);
+    setLobbyId('');
     setNotifications((prev) => prev.filter((n) => n.id !== id));
     setProgressMap((prev) => {
       const { [id]: _, ...rest } = prev;
@@ -196,8 +262,8 @@ export default function AcceptInvite() {
           </button>
 
           {/* Content */}
-          <h2 className="text-lg font-semibold">Friend Request</h2>
-          <p className="text-gray-300">{n.email}</p>
+          <h2 className="text-lg font-semibold">{isLobbyInvite ? 'Playground Invitation' : 'Friend Request'}</h2>
+          <p className="text-gray-300">{isLobbyInvite ? `${n.email} invited you to a playground` : `${n.email}`}</p>
 
           <div className="flex gap-x-2 mt-3">
             <button onClick={() => {handleDeny(n.email); handleClose(n.id)}} className="bg-slate-200 text-black px-3 py-1 rounded">

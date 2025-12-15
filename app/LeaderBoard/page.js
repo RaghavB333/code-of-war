@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 
 const LeaderBoard = () => {
     const { user } = useContext(UserDataContext);
-    const [playground, setPlayground] = useState([]);
+    const [playgrounds, setPlaygrounds] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -19,10 +19,10 @@ const LeaderBoard = () => {
             setLoading(true);
             setError(null);
             if (user && user.email) {
-                const response = await axios.get(`/api/createplayground?id=${user.email}`);
+                const response = await axios.get(`/api/leaderboard/${user._id}`);
                 const data = response.data;
-                console.log("playground : ", data.lobby);
-                setPlayground(data.lobby || []);
+                console.log("playground : ", data.playgrounds);
+                setPlaygrounds(data.playgrounds || []);
             }
         } catch (err) {
             console.error("Error fetching lobby data:", err);
@@ -34,7 +34,7 @@ const LeaderBoard = () => {
 
     useEffect(() => {
         getPlaygrounds();
-    }, [user?.email]);
+    }, [user?._id]);
 
     const handleClick = (id) => {
         router.push(`/LeaderBoard/${id}`);
@@ -113,25 +113,25 @@ const LeaderBoard = () => {
                     )}
 
                     {/* Playgrounds Grid */}
-                    {playground.length > 0 ? (
+                    {playgrounds.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {playground.map((item, index) => {
+                            {playgrounds.map((item, index) => {
                                 const formattedDate = formatDate(item.createdAt);
                                 return (
                                     <div
                                         key={item._id || index}
                                         className="bg-white backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group"
-                                        onClick={() => handleClick(item.id)}
+                                        onClick={() => handleClick(item._id)}
                                     >
                                         {/* Card Header */}
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex items-center">
                                                 <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center text-white font-bold text-lg mr-3">
-                                                    {(item.id || item._id || 'P').substring(0, 2).toUpperCase()}
+                                                    {(item._id || 'P').substring(0, 2).toUpperCase()}
                                                 </div>
                                                 <div>
                                                     <h3 className="text-lg font-semibold text-gray-800 group-hover:text-purple-600 transition-colors">
-                                                        Playground #{(item.id || item._id || '').substring(0, 8)}
+                                                        Playground #{(item._id || '').substring(0, 8)}
                                                     </h3>
                                                     {item.status && (
                                                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status)}`}>
@@ -227,23 +227,23 @@ const LeaderBoard = () => {
                     )}
 
                     {/* Stats Summary */}
-                    {playground.length > 0 && (
+                    {playgrounds.length > 0 && (
                         <div className="mt-12 bg-white backdrop-blur-sm rounded-xl p-6 border border-white/20">
                             <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">📊 Your Stats</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                                 <div>
-                                    <h4 className="text-2xl font-bold text-purple-600">{playground.length}</h4>
+                                    <h4 className="text-2xl font-bold text-purple-600">{playgrounds.length}</h4>
                                     <p className="text-gray-600">Total Playgrounds</p>
                                 </div>
                                 <div>
                                     <h4 className="text-2xl font-bold text-blue-600">
-                                        {playground.filter(p => p.status === 'active').length}
+                                        {playgrounds.filter(p => p.status === 'active').length}
                                     </h4>
                                     <p className="text-gray-600">Active Games</p>
                                 </div>
                                 <div>
                                     <h4 className="text-2xl font-bold text-green-600">
-                                        {playground.reduce((total, p) => total + (Array.isArray(p.members) ? p.members.length : 0), 0)}
+                                        {playgrounds.reduce((total, p) => total + (Array.isArray(p.members) ? p.members.length : 0), 0)}
                                     </h4>
                                     <p className="text-gray-600">Total Players</p>
                                 </div>
