@@ -1,6 +1,6 @@
 export async function POST(req) {
   const body = await req.json();
-  const res = await fetch("http://43.204.216.76:2358/submissions", {
+  const res = await fetch("3.110.43.197/submissions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
