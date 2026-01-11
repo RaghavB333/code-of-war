@@ -330,24 +330,23 @@ const CodeEditorPage = ({ params }) => {
         </div> */}
 
           {/* Main Content */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex max-lg:flex-col overflow-hidden">
             {/* Left Panel: Problem Description */}
             <div
-              className="bg-background backdrop-blur-sm overflow-y-auto"
-              style={{ width: `${leftWidth}%` }}
+              className="bg-background backdrop-blur-sm lg:overflow-y-auto w-full lg:w-1/2 "
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-4">
-                      <h2 className="text-2xl font-bold text-white">{problemTitle}</h2>
+                      <h2 className="text-lg lg:text-2xl font-bold text-white truncate">{problemTitle}</h2>
                       <span className="px-3 py-1 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-sm font-semibold rounded-full shadow-lg">
                         Easy
                       </span>
                     </div>
                     <Link
                       href="/submissions"
-                      className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md transition-transform transform hover:scale-105 w-full sm:w-auto text-center"
+                      className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md transition-transform transform hover:scale-105 sm:w-auto text-center"
                     >
                       Submissions
                     </Link>
@@ -404,8 +403,7 @@ const CodeEditorPage = ({ params }) => {
 
             {/* Right Panel: Code Editor */}
             <div
-              className=" backdrop-blur-sm overflow-y-auto flex flex-col"
-              style={{ width: `${100 - leftWidth}%` }}
+              className="backdrop-blur-sm lg:overflow-y-auto flex flex-col w-full lg:w-1/2 "
             >
               <div className="p-6 flex-1 flex flex-col">
                 {/* Editor Controls */}
