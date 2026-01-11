@@ -57,14 +57,14 @@ const CodeEditorPage = ({ params }) => {
 
 
 
-    useEffect(() => {
+  useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDragging || !containerRef.current) return;
-      
+
       const container = containerRef.current;
       const containerRect = container.getBoundingClientRect();
       const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-      
+
       if (newWidth > 20 && newWidth < 80) {
         setLeftWidth(newWidth);
       }
@@ -125,26 +125,34 @@ const CodeEditorPage = ({ params }) => {
 
 
   const analyzeCode = async () => {
-    if (!code) {
-      alert("Please write some code before analyzing!");
+    if (!code || !language) {
+      alert("Select language and write code first");
       return;
     }
 
     try {
-      setIsAnalyzing(true); // Start loader
+      setIsAnalyzing(true);
+
       const analyzeUrl = process.env.NEXT_PUBLIC_ANALZYER;
-      console.log(language)
-      const response = await axios.post(`${analyzeUrl}/analyze`, { code: AnalysisCode, language: language });
-      console.log(response.data)
-      setAnalysisResults(response.data); // Store results for visualization
+
+      // Wrap fresh code
+      const wrapped = wrapCode(language, code, languageWrappers);
+
+      const response = await axios.post(`${analyzeUrl}/analyze`, {
+        code: wrapped,
+        language
+      });
+
+      console.log(response.data);
+      setAnalysisResults(response.data);
     } catch (error) {
       console.error("Error analyzing code:", error);
-      alert("An error occurred while analyzing the code.");
+      alert("Analysis failed");
     } finally {
       setIsAnalyzing(false);
-
     }
   };
+
 
 
 
@@ -301,10 +309,10 @@ const CodeEditorPage = ({ params }) => {
 
 
 
-    <div className="min-h-screen bg-background">
-      <div ref={containerRef} className="h-screen flex flex-col">
-        {/* Header */}
-        {/* <div className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50 px-6 py-4 flex items-center justify-between shadow-lg">
+      <div className="min-h-screen bg-background">
+        <div ref={containerRef} className="h-screen flex flex-col">
+          {/* Header */}
+          {/* <div className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50 px-6 py-4 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg">
               <Code className="w-6 h-6 text-white" />
@@ -321,135 +329,135 @@ const CodeEditorPage = ({ params }) => {
           </a>
         </div> */}
 
-        {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left Panel: Problem Description */}
-          <div 
-            className="bg-background backdrop-blur-sm overflow-y-auto"
-            style={{ width: `${leftWidth}%` }}
-          >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-4">
-                    <h2 className="text-2xl font-bold text-white">{problemTitle}</h2>
-                    <span className="px-3 py-1 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-sm font-semibold rounded-full shadow-lg">
-                      Easy
-                    </span>
+          {/* Main Content */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left Panel: Problem Description */}
+            <div
+              className="bg-background backdrop-blur-sm overflow-y-auto"
+              style={{ width: `${leftWidth}%` }}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-2xl font-bold text-white">{problemTitle}</h2>
+                      <span className="px-3 py-1 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-sm font-semibold rounded-full shadow-lg">
+                        Easy
+                      </span>
+                    </div>
+                    <Link
+                      href="/submissions"
+                      className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md transition-transform transform hover:scale-105 w-full sm:w-auto text-center"
+                    >
+                      Submissions
+                    </Link>
                   </div>
-                  <Link
-                    href="/submissions"
-                    className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md transition-transform transform hover:scale-105 w-full sm:w-auto text-center"
-                  >
-                    Submissions
-                  </Link>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                {/* Description */}
-                <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 shadow-xl">
-                  <h3 className="text-lg font-semibold text-indigo-400 mb-3">Description</h3>
-                  <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{problemDesc}</p>
                 </div>
 
-                {/* Examples */}
-                <div>
-                  <h3 className="text-lg font-semibold text-indigo-400 mb-4">Examples</h3>
-                  <div className="space-y-4">
-                    {examples.map((example, index) => (
-                      <div key={index} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 shadow-lg hover:border-indigo-500/50 transition-all duration-200">
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <span className="text-sm font-semibold text-emerald-400 min-w-[60px]">Input:</span>
-                            <code className="text-sm font-mono bg-slate-900/70 px-3 py-1.5 rounded-lg text-slate-200 flex-1">
-                              {example.input}
-                            </code>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-sm font-semibold text-purple-400 min-w-[60px]">Output:</span>
-                            <code className="text-sm font-mono bg-slate-900/70 px-3 py-1.5 rounded-lg text-slate-200 flex-1">
-                              {example.output}
-                            </code>
+                <div className="space-y-6">
+                  {/* Description */}
+                  <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 shadow-xl">
+                    <h3 className="text-lg font-semibold text-indigo-400 mb-3">Description</h3>
+                    <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{problemDesc}</p>
+                  </div>
+
+                  {/* Examples */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-indigo-400 mb-4">Examples</h3>
+                    <div className="space-y-4">
+                      {examples.map((example, index) => (
+                        <div key={index} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 shadow-lg hover:border-indigo-500/50 transition-all duration-200">
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm font-semibold text-emerald-400 min-w-[60px]">Input:</span>
+                              <code className="text-sm font-mono bg-slate-900/70 px-3 py-1.5 rounded-lg text-slate-200 flex-1">
+                                {example.input}
+                              </code>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm font-semibold text-purple-400 min-w-[60px]">Output:</span>
+                              <code className="text-sm font-mono bg-slate-900/70 px-3 py-1.5 rounded-lg text-slate-200 flex-1">
+                                {example.output}
+                              </code>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Resizer */}
-          <div
-            className="w-1 bg-slate-700/50 hover:bg-indigo-500 cursor-col-resize transition-colors relative group"
-            onMouseDown={() => setIsDragging(true)}
-          >
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="flex gap-0.5">
-                <div className="w-1 h-8 bg-white rounded-full"></div>
-                <div className="w-1 h-8 bg-white rounded-full"></div>
+            {/* Resizer */}
+            <div
+              className="w-1 bg-slate-700/50 hover:bg-indigo-500 cursor-col-resize transition-colors relative group"
+              onMouseDown={() => setIsDragging(true)}
+            >
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-8 bg-white rounded-full"></div>
+                  <div className="w-1 h-8 bg-white rounded-full"></div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Right Panel: Code Editor */}
-          <div 
-            className=" backdrop-blur-sm overflow-y-auto flex flex-col"
-            style={{ width: `${100 - leftWidth}%` }}
-          >
-            <div className="p-6 flex-1 flex flex-col">
-              {/* Editor Controls */}
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <select
-                  onChange={handleLanguageChange}
-                  value={language}
-                  className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer hover:bg-slate-750"
-                >
-                  <option value="" disabled>Select Language</option>
-                  {supportedLanguages.map((lang) => (
-                    <option key={lang} value={lang}>
-                      {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                    </option>
-                  ))}
-                </select>
-                
-                <button
-                  onClick={runTestCases}
-                  disabled={isRunning}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  {isRunning ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Running...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4" />
-                      Run Tests
-                    </>
-                  )}
-                </button>
-              </div>
+            {/* Right Panel: Code Editor */}
+            <div
+              className=" backdrop-blur-sm overflow-y-auto flex flex-col"
+              style={{ width: `${100 - leftWidth}%` }}
+            >
+              <div className="p-6 flex-1 flex flex-col">
+                {/* Editor Controls */}
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <select
+                    onChange={handleLanguageChange}
+                    value={language}
+                    className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer hover:bg-slate-750"
+                  >
+                    <option value="" disabled>Select Language</option>
+                    {supportedLanguages.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                      </option>
+                    ))}
+                  </select>
 
-              {/* Code Editor */}
+                  <button
+                    onClick={runTestCases}
+                    disabled={isRunning}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {isRunning ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Running...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" />
+                        Run Tests
+                      </>
+                    )}
+                  </button>
+                </div>
 
-                        {language && (
-            <MonacoEditor
-              height="70vh"
-              language={language}
-              value={code}
-              onChange={(value) => setCode(value)}
-              options={{
-                fontSize: 14,
-                minimap: { enabled: false },
-                theme: "vs-dark",
-              }}
-            />
-          )}
-              {/* {language && (
+                {/* Code Editor */}
+
+                {language && (
+                  <MonacoEditor
+                    height="70vh"
+                    language={language}
+                    value={code}
+                    onChange={(value) => setCode(value)}
+                    options={{
+                      fontSize: 14,
+                      minimap: { enabled: false },
+                      theme: "vs-dark",
+                    }}
+                  />
+                )}
+                {/* {language && (
                 <div className="flex-1 bg-slate-950 rounded-xl border border-slate-700/50 shadow-2xl overflow-hidden mb-4">
                   <textarea
                     value={code}
@@ -461,125 +469,124 @@ const CodeEditorPage = ({ params }) => {
                 </div>
               )} */}
 
-              {/* Test Results */}
-              {results && hasRunTests && (
-                <div className="space-y-4 mt-3">
-                  <div className="bg-background rounded-xl p-5 border border-slate-700/50 shadow-xl">
-                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-indigo-400" />
-                      Test Results
-                    </h3>
-                    
-                    {isRunning ? (
-                      <div className="flex items-center gap-3 text-slate-400">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Running test cases...</span>
-                      </div>
-                    ) : results.allPassed ? (
-                      <div className="flex items-center gap-3 text-green-400">
-                        <CheckCircle className="w-6 h-6" />
-                        <span className="font-semibold text-lg">All test cases passed!</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 text-red-400 mb-3">
-                          <XCircle className="w-6 h-6" />
-                          <span className="font-semibold">Test case failed</span>
+                {/* Test Results */}
+                {results && hasRunTests && (
+                  <div className="space-y-4 mt-3">
+                    <div className="bg-background rounded-xl p-5 border border-slate-700/50 shadow-xl">
+                      <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-indigo-400" />
+                        Test Results
+                      </h3>
+
+                      {isRunning ? (
+                        <div className="flex items-center gap-3 text-slate-400">
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Running test cases...</span>
                         </div>
-                        <div className="space-y-2 bg-slate-900/50 rounded-lg p-4">
-                          <div>
-                            <span className="text-sm font-semibold text-slate-400">Input:</span>
-                            <code className="ml-2 text-sm font-mono text-slate-200">
-                              {JSON.stringify(results.inputs)}
-                            </code>
+                      ) : results.allPassed ? (
+                        <div className="flex items-center gap-3 text-green-400">
+                          <CheckCircle className="w-6 h-6" />
+                          <span className="font-semibold text-lg">All test cases passed!</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 text-red-400 mb-3">
+                            <XCircle className="w-6 h-6" />
+                            <span className="font-semibold">Test case failed</span>
                           </div>
-                          <div>
-                            <span className="text-sm font-semibold text-slate-400">Expected:</span>
-                            <code className="ml-2 text-sm font-mono text-green-400">
-                              {results.expectedOutput}
-                            </code>
+                          <div className="space-y-2 bg-slate-900/50 rounded-lg p-4">
+                            <div>
+                              <span className="text-sm font-semibold text-slate-400">Input:</span>
+                              <code className="ml-2 text-sm font-mono text-slate-200">
+                                {JSON.stringify(results.inputs)}
+                              </code>
+                            </div>
+                            <div>
+                              <span className="text-sm font-semibold text-slate-400">Expected:</span>
+                              <code className="ml-2 text-sm font-mono text-green-400">
+                                {results.expectedOutput}
+                              </code>
+                            </div>
+                            <div>
+                              <span className="text-sm font-semibold text-slate-400">Actual:</span>
+                              <code className="ml-2 text-sm font-mono text-red-400">
+                                {results.actualOutput}
+                              </code>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-sm font-semibold text-slate-400">Actual:</span>
-                            <code className="ml-2 text-sm font-mono text-red-400">
-                              {results.actualOutput}
-                            </code>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    {results.allPassed && (
+                      <div className="flex gap-3">
+                        <button
+                          onClick={submitSolution}
+                          disabled={hasSubmitted}
+                          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all duration-200 ${hasSubmitted
+                              ? "bg-slate-700 text-slate-400 cursor-not-allowed"
+                              : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg transform hover:scale-105"
+                            }`}
+                        >
+                          <Send className="w-4 h-4" />
+                          {hasSubmitted ? "Submitted ✓" : "Submit Solution"}
+                        </button>
+
+                        <button
+                          onClick={analyzeCode}
+                          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105"
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                          Analyze Code
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Analysis Results */}
+                    {isAnalyzing ? (
+                      <div className="flex justify-center items-center py-8">
+                        <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+                      </div>
+                    ) : analysisResults && (
+                      <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl p-6 border border-slate-700/50 shadow-xl">
+                        <h3 className="text-lg font-semibold text-white mb-4">Code Analysis</h3>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-slate-900/50 rounded-lg p-4">
+                              <div className="text-sm text-slate-400 mb-1">Time Complexity</div>
+                              <div className="text-xl font-bold text-indigo-400">{analysisResults.time}</div>
+                            </div>
+                            <div className="bg-slate-900/50 rounded-lg p-4">
+                              <div className="text-sm text-slate-400 mb-1">Space Complexity</div>
+                              <div className="text-xl font-bold text-purple-400">{analysisResults.memory}</div>
+                            </div>
                           </div>
+
+                          {['performance', 'readability', 'efficiency'].map((metric) => (
+                            <div key={metric}>
+                              <div className="flex justify-between text-sm mb-2">
+                                <span className="text-slate-300 capitalize">{metric}</span>
+                                <span className="text-white font-semibold">{analysisResults[metric]}%</span>
+                              </div>
+                              <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${analysisResults[metric]}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
                   </div>
-
-                  {/* Action Buttons */}
-                  {results.allPassed && (
-                    <div className="flex gap-3">
-                      <button
-                        onClick={submitSolution}
-                        disabled={hasSubmitted}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
-                          hasSubmitted
-                            ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                            : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg transform hover:scale-105"
-                        }`}
-                      >
-                        <Send className="w-4 h-4" />
-                        {hasSubmitted ? "Submitted ✓" : "Submit Solution"}
-                      </button>
-
-                      <button
-                        onClick={analyzeCode}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105"
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        Analyze Code
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Analysis Results */}
-                  {isAnalyzing ? (
-                    <div className="flex justify-center items-center py-8">
-                      <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
-                    </div>
-                  ) : analysisResults && (
-                    <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl p-6 border border-slate-700/50 shadow-xl">
-                      <h3 className="text-lg font-semibold text-white mb-4">Code Analysis</h3>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-slate-900/50 rounded-lg p-4">
-                            <div className="text-sm text-slate-400 mb-1">Time Complexity</div>
-                            <div className="text-xl font-bold text-indigo-400">{analysisResults.timeComplexity}</div>
-                          </div>
-                          <div className="bg-slate-900/50 rounded-lg p-4">
-                            <div className="text-sm text-slate-400 mb-1">Space Complexity</div>
-                            <div className="text-xl font-bold text-purple-400">{analysisResults.spaceComplexity}</div>
-                          </div>
-                        </div>
-                        
-                        {['performance', 'readability', 'efficiency'].map((metric) => (
-                          <div key={metric}>
-                            <div className="flex justify-between text-sm mb-2">
-                              <span className="text-slate-300 capitalize">{metric}</span>
-                              <span className="text-white font-semibold">{analysisResults[metric]}%</span>
-                            </div>
-                            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
-                                style={{ width: `${analysisResults[metric]}%` }}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
 
 
