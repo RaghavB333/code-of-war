@@ -215,7 +215,7 @@ const LeaderBoard = () => {
                             <div className="text-6xl mb-6">🎮</div>
                             <h3 className="text-2xl font-semibold text-gray-700 mb-3">No Playgrounds Yet</h3>
                             <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                                You haven't created any playgrounds yet. Create your first playground to start competing with friends!
+                                You haven&apos;t created any playgrounds yet. Create your first playground to start competing with friends!
                             </p>
                             <button 
                                 onClick={() => router.push('/Playground')}

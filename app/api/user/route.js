@@ -40,24 +40,18 @@ export async function POST(req) {
   }
 
   const hashPassword = await userModel.hashPassword(password);
-  console.log(hashPassword);
 
   const user = await userModel.create({
       username: username,
       email: email,
       password: hashPassword,
       authProvider: "credentials",
+      role: "user",
   });
-
-  const token = user.generateAuthToken();
     
     return new Response(
-    JSON.stringify({ success: true, token, user }),
+    JSON.stringify({ success: true}),
     {
     status: 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Set-Cookie": `token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
-    }
   })
 }

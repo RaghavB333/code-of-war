@@ -195,7 +195,7 @@ export default function LobbyPage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center p-6 bg-background rounded-lg shadow-md">
           <h2 className="text-2xl font-bold text-red-500 mb-2">Lobby Not Found</h2>
-          <p className="text-white mb-4">We couldn't find the lobby you're looking for.</p>
+          <p className="text-white mb-4">We couldn&rsquo;t find the lobby you&rsquo;re looking for.</p>
           <button 
             onClick={() => router.push('/dashboard')}
             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"

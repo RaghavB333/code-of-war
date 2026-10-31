@@ -25,7 +25,6 @@ export async function GET(req) {
     ?.split("; ")
     .find((c) => c.startsWith("token="))
     ?.split("=")[1];
-    console.log("token : ",token);
     if(!token)
     {
         return new Response(

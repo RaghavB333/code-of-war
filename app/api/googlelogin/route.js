@@ -4,7 +4,7 @@ import userModel from "@/models/user.model";
 export async function POST(req) {
     // Connect to the database
     await connectDB();
-        const body = await req.json();
+    const body = await req.json();
     const { username, email} = body;
 
     let user = await userModel.findOne({ email });
@@ -14,6 +14,7 @@ export async function POST(req) {
         username,
         email,
         authProvider: "google", // <-- new field
+        role: "user",
       });
     } else if (user.authProvider !== "google") {
     return new Response(
@@ -22,7 +23,7 @@ export async function POST(req) {
     );
   }
 
-        const token = user.generateAuthToken();
+    const token = user.generateAuthToken();
     
     return new Response(
     JSON.stringify({ success: true, token, user }),

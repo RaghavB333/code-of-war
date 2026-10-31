@@ -42,7 +42,6 @@ const UserContext = ({children}) => {
           const response = await axios.get('/api/profile', {withCredentials: true});
           if(response.status === 200){
               const data = response.data;
-              console.log(data);
               setUser(data.user);
           }
         }catch(error){

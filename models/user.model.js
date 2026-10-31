@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const userSchema = new mongoose.Schema({
-       username:{
+    username:{
         type: String,
         required: true, 
         minlength: [3,'First name must be at least 3 characters long'],
@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
+        trim: true,
+        lowercase: true,
         minlength: [5,'Email name must be at least 5 characters long'],
     },
     authProvider: {
@@ -20,10 +22,26 @@ const userSchema = new mongoose.Schema({
   },
     password:{
         type: String,
+        minlength: [6,'Password must be at least 6 characters long'],
         required: function() {
         return this.authProvider === "credentials";
         },
         select: false,       
+    },
+    passwordChangedAt: {
+        type: Date,
+        default: null,
+    },
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user',
+        required: true,
+    },
+    accountStatus: {
+        type: String,
+        enum: ["active", "suspended", "deleted"],
+        default: "active",
     },
     notifications:{
         type: [
@@ -67,6 +85,12 @@ const userSchema = new mongoose.Schema({
         type: [String], // Format: "YYYY-MM-DD"
         default: [],
     },
+    solvedProblems: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Problem",
+        },
+    ],
     easyproblemssolved:{
         type: Number,
         default: 0

@@ -4,9 +4,11 @@ import { useState, useContext } from 'react';
 import axios from "axios"
 import { useRouter } from 'next/navigation';
 import { UserDataContext } from '@/context/UserContext';
+import { useSearchParams } from "next/navigation";
 import { signIn} from "next-auth/react";
 import { FcGoogle } from "react-icons/fc";
 import { Mail, Lock } from 'lucide-react';
+import Link from "next/link";
 import Image from 'next/image';
 
 const Login = () => {
@@ -14,6 +16,8 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const {setUser} = useContext(UserDataContext);
+    const searchParams = useSearchParams();
+    const redirectPath = searchParams.get("redirect");
     const router = useRouter();
     
     const submitHandler = async(e) => {
@@ -29,7 +33,7 @@ const Login = () => {
           setUser(data.user);
           setemail('');
           setPassword('');
-          router.push('/');
+          router.push(redirectPath || '/');
         }
         else{
           setMessage(response.data.message);
@@ -84,7 +88,7 @@ const Login = () => {
           <div className="space-y-1 mt-4">
             <div className="flex justify-between items-center">
               <label className="text-sm font-medium text-white block">Password</label>
-              <a href="#" className="text-sm text-blue-300 hover:text-blue-400">Forgot password?</a>
+              <Link href={redirectPath ? `/forgot-password?redirect=${encodeURIComponent(redirectPath)}` : '/forgot-password'} className="text-sm text-blue-300 hover:text-blue-400">Forgot password?</Link>
             </div>
             <div className="relative">
               <Lock className="w-5 h-5 text-[#67676e] absolute left-3 top-1/2 -translate-y-1/2" />
@@ -107,30 +111,20 @@ const Login = () => {
           >
             Login
           </button>
-          {/* <button
-            type="submit"
-            className="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition-colors duration-300"
-          >
-            Login
-          </button> */}
         </form>
 
         <div className="flex mt-3 items-center gap-3 before:h-px before:flex-1 before:bg-white/30 after:h-px after:flex-1 after:bg-white/30">
           <span className="text-xs text-muted-foreground">Or</span>
         </div>
 
-          <button onClick={() => signIn("google", { callbackUrl: "/" })} className="w-full flex justify-center items-center mt-3 bg-[#09090b] text-white border border-white/10 font-semibold py-2 rounded-lg transition-colors duration-300 shadow-md hover:shadow-lg">
+          <button onClick={() => signIn("google", { callbackUrl: redirectPath ? `/${redirectPath}` : '/' })} className="w-full flex justify-center items-center mt-3 bg-[#09090b] text-white border border-white/10 font-semibold py-2 rounded-lg transition-colors duration-300 shadow-md hover:shadow-lg">
             <FcGoogle className="mr-2 size-5" />
             Continue with Google
           </button>
-          {/* <button onClick={() => signIn("google", { callbackUrl: "/" })} className="w-full flex justify-center items-center mt-3 bg-white text-black border border-white font-semibold py-2 rounded-lg transition-colors duration-300 shadow-md hover:shadow-lg">
-            <FcGoogle className="mr-2 size-5" />
-            Continue with Google
-          </button> */}
 
         <p className="text-center mt-6 text-[#8f8f99] pb-4">
-          Don't have an account?{' '}
-          <a href="/Signup" className="text-blue-600 hover:text-blue-700 hover:underline font-medium">
+          Don&apos;t have an account?{' '}
+          <a href={redirectPath ? `/Signup?redirect=${encodeURIComponent(redirectPath)}` : '/Signup'} className="text-blue-600 hover:text-blue-700 hover:underline font-medium">
             Sign up
           </a>
         </p>

@@ -1,6 +1,5 @@
 import connectDB from "@/lib/mongoose";
 import userModel from "@/models/user.model";
-// import sendToken from "@/utils/jwtToken";
 const {validationResult} = require('express-validator');
 
 export async function POST(req) {

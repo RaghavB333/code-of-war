@@ -1,5 +1,5 @@
 import connectDB from "../../../lib/mongoose"; // Utility to connect to DB
-import Submissions from "../../../models/submissions";
+import Submissions from "../../../models/submission";
 import userModel from "@/models/user.model";
 import Problem from "@/models/problems"; // Import Submission model
 import playground from "@/models/playground"; // Import Playground model

@@ -174,7 +174,7 @@ export default function Home() {
 
                   <h2 className="text-2xl font-bold text-purple-400 mb-4">Our Mission</h2>
                   <p className="text-lg text-gray-100 mb-6">
-                    We aim to provide a developer-first experience that balances learning with fun and competition like a game. Whether you're
+                    We aim to provide a developer-first experience that balances learning with fun and competition like a game. Whether you&rsquo;re
                     preparing for FAANG interviews, brushing up your DSA, or just love solving problems — this is your battlefield. So come out here, bringyour friends, and tell the world who is going to be the the Code of war champion.</p>
 
                   <h2 className="text-2xl font-bold text-yellow-300 mb-4">Who Is It For?</h2>
