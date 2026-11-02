@@ -24,8 +24,8 @@ const CreateLobby = () => {
   useEffect(()=>{
     const fetchProblems = async() => {
       const response = await axios.get('/api/problems');
-      setProblems(response.data);
-      console.log(response.data);
+      setProblems(response.data.problems);
+      console.log(response.data.problems);
     }
     fetchProblems();
   },[]);
