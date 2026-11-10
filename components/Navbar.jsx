@@ -1,4 +1,3 @@
-
 "use client"
 import { useState, useContext } from "react";
 import Link from "next/link";
@@ -37,25 +36,25 @@ export default function Navbar() {
                     {/* <Link href="/tournaments" className="hover:text-yellow-400">
                         Tournaments
                     </Link> */}
-                    <Link href="/Playground" className="hover:text-yellow-400">
-                        Playground
+                    <Link href="/party" className="hover:text-yellow-400">
+                        Create Party
                     </Link>
                     <Link href="/problems" className="hover:text-yellow-400">
                         Problems
                     </Link>
-                    <Link href="/Dashboard" className="hover:text-yellow-400">
+                    <Link href="/dashboard" className="hover:text-yellow-400">
                         Dashboard
                     </Link>
-                    <Link href="/LeaderBoard" className="hover:text-yellow-400">
-                        Leaderboard
+                    <Link href="/battles" className="hover:text-yellow-400">
+                        Battles
                     </Link>
 
                     {!user ? (
                         <>
-                            <Link href="/Signup" className="hover:text-yellow-400">
+                            <Link href="/signup" className="hover:text-yellow-400">
                                 Signup
                             </Link>
-                            <Link href="/Login" className="hover:text-yellow-400">
+                            <Link href="/login" className="hover:text-yellow-400">
                                 Login
                             </Link>
                         </>
@@ -95,21 +94,21 @@ export default function Navbar() {
                     <Link href="/problems" className=" block px-4 py-2">
                         Problems
                     </Link>
-                    <Link href="/Playground" className=" block px-4 py-2">
-                        Playground
+                    <Link href="/party" className=" block px-4 py-2">
+                        Create Party
                     </Link>
-                    <Link href="/Dashboard" className=" block px-4 py-2">
+                    <Link href="/dashboard" className=" block px-4 py-2">
                         Dashboard
                     </Link>
-                    <Link href="/LeaderBoard" className=" block px-4 py-2">
-                        Leaderboard
+                    <Link href="/battles" className=" block px-4 py-2">
+                        Battles
                     </Link>
                     {!user ? (
                         <>
-                            <Link href="/Signup" className="block px-4 py-2 ho">
+                            <Link href="/signup" className="block px-4 py-2 ho">
                                 Signup
                             </Link>
-                            <Link href="/Login" className="block px-4 py-2 ho">
+                            <Link href="/login" className="block px-4 py-2 ho">
                                 Login
                             </Link>
                         </>

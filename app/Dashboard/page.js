@@ -1,456 +1,475 @@
 "use client"
-import React from 'react'
-import { useState, useEffect, useContext } from 'react';
+
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import axios from 'axios';
 import { UserDataContext } from '@/context/UserContext';
 import { LobbyDataContext } from '@/context/LobbyContext';
-import UserProtectWrapper from '@/components/UserProtectWrapper'
-import { Mail, User, Bell, Plus, Activity, Users, Calendar, Settings, Trophy, Target, Zap, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
+import UserProtectWrapper from '@/components/UserProtectWrapper';
 import Heatmap from '@/components/Heatmap';
-import axios from 'axios';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination } from 'swiper/modules';
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
+import {
+  FRIENDS_EVENT, acceptFriendRequest, denyFriendRequest, sendFriendRequest, errorMessage,
+} from '@/lib/friendActions';
+import {
+  Mail, User, Bell, UserPlus, Users, Flame, Trophy, Target, Crown, Check, X, Swords,
+} from 'lucide-react';
 
-const Dashboard = () => {
-    const [friendemail, setFriendEmail] = useState('');
-    const [notifications, setNotifications] = useState([]);
-    const [friends, setFriends] = useState([]);
+const COLORS = { easy: '#22c55e', medium: '#eab308', hard: '#ef4444' };
 
-    const { user } = useContext(UserDataContext);
-    const {socket} = useContext(LobbyDataContext);
+const iso = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    const getnotifications = async () => {
-        if (user && user.email) {
-            const response = await axios.post('/api/getnotifications', { email: user.email });
-            const data = response.data;
-            setNotifications(data.notifications);
-            console.log(notifications);
-        }
-    }
-
-    const getFriends = async () => {
-        if (user && user.email) {
-            const response = await axios.get('/api/getfriends', {withCredentials:true});
-            const data = response.data;
-            setFriends(data.friends);
-        }
-    }
-
-    useEffect(() => {
-        getFriends();
-    }, [user && user.email])
-
-    useEffect(() => {
-        if (user && user.email)
-            getnotifications();
-    }, [user && user.email]);
-
-    const handleAccept = async (senderEmail, receiverEmail) => {
-        const data = {
-            senderEmail: senderEmail,
-            receiverEmail: receiverEmail
-        }
-        const response = await axios.post('/api/acceptrequest', data);
-        console.log(response.data);
-        getFriends();
-        getnotifications();
-    }
-
-    const handleDeny = async(senderEmail) => {
-        try{
-            const response = await axios.put('/api/denyrequest', {senderEmail: senderEmail}, {withCredentials:true});
-            if(response.status == 200){
-                console.log(response.data);
-                getFriends();
-                getnotifications();
-            }
-        }catch(error){
-            console.log(error);
-        }
-    }
-
-    const handlesumbit = async (e) => {
-        e.preventDefault();
-        if (user && user.email) {
-            const data = {
-                email: user.email,
-                friendemail: friendemail
-            }
-            socket.emit('add-friend', {data});
-            setFriendEmail('');
-        }
-    }
-
-    const totalProblems = user ? user.easyproblemssolved + user.mediumproblemssolved + user.hardproblemssolved : 0;
-
-    return (
-        <UserProtectWrapper>
-            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-                {/* Header */}
-                <div className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-10">
-                    <div className="max-w-7xl mx-auto px-6 py-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                    <Crown className="w-6 h-6 text-white" />
-                                </div>
-                                <div>
-                                    <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-                                    <p className="text-sm text-gray-400">Welcome back, {user && user.username}!</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                                <div className="relative">
-                                    <Bell className="w-6 h-6 text-gray-400 hover:text-white cursor-pointer transition-colors" />
-                                    {notifications.length > 0 && (
-                                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                                            {notifications.length}
-                                        </span>
-                                    )}
-                                </div>
-                                <Settings className="w-6 h-6 text-gray-400 hover:text-white cursor-pointer transition-colors" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="max-w-7xl mx-auto px-6 py-8">
-                    <div className="grid grid-cols-12 gap-8">
-                        {/* Main Content */}
-                        <div className="col-span-12 lg:col-span-8 space-y-8">
-                            {/* Stats Cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                                {/* Profile Card */}
-                                <div className="md:col-span-2 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 p-6 rounded-2xl shadow-xl border border-emerald-400/20">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex-1">
-                                            <div className="flex items-center space-x-3 mb-2">
-                                                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                                                    <User className="w-6 h-6 text-white" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-xl font-bold text-white">{user && user.username}</h3>
-                                                    <p className="text-emerald-100 text-sm">@{user && user.email.split('@')[0]}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-white/10 rounded-lg p-3">
-                                            <div className="flex items-center space-x-2 mb-1">
-                                                <Zap className="w-4 h-4 text-yellow-300" />
-                                                <p className="text-emerald-100 text-sm font-medium">Current Streak</p>
-                                            </div>
-                                            <p className="text-2xl font-bold text-white">{user && user.streak.current}</p>
-                                        </div>
-                                        <div className="bg-white/10 rounded-lg p-3">
-                                            <div className="flex items-center space-x-2 mb-1">
-                                                <Trophy className="w-4 h-4 text-orange-300" />
-                                                <p className="text-emerald-100 text-sm font-medium">Best Streak</p>
-                                            </div>
-                                            <p className="text-2xl font-bold text-white">{user && user.streak.max}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Total Problems */}
-                                <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-6 rounded-2xl shadow-xl border border-blue-400/20">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <Target className="w-8 h-8 text-blue-100" />
-                                        <div className="text-right">
-                                            <p className="text-blue-100 text-sm font-medium">Total Solved</p>
-                                            <p className="text-3xl font-bold text-white">{totalProblems}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Friends Count */}
-                                <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-6 rounded-2xl shadow-xl border border-purple-400/20">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <Users className="w-8 h-8 text-purple-100" />
-                                        <div className="text-right">
-                                            <p className="text-purple-100 text-sm font-medium">Friends</p>
-                                            <p className="text-3xl font-bold text-white">{friends?.length}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Problems Breakdown */}
-                            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/50 p-6">
-                                <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
-                                    <Activity className="w-6 h-6 mr-3 text-blue-400" />
-                                    Problem Statistics
-                                </h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30 rounded-xl p-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-green-400 font-medium">Easy</span>
-                                            <span className="text-green-300 text-sm">●</span>
-                                        </div>
-                                        <p className="text-2xl font-bold text-white">{user && user.easyproblemssolved}</p>
-                                        <div className="w-full bg-gray-700 rounded-full h-2 mt-3">
-                                            <div 
-                                                className="bg-green-500 h-2 rounded-full transition-all duration-1000" 
-                                                style={{ width: `${totalProblems > 0 ? (user.easyproblemssolved / totalProblems) * 100 : 0}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-gradient-to-br from-yellow-500/20 to-orange-600/20 border border-yellow-500/30 rounded-xl p-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-yellow-400 font-medium">Medium</span>
-                                            <span className="text-yellow-300 text-sm">●</span>
-                                        </div>
-                                        <p className="text-2xl font-bold text-white">{user && user.mediumproblemssolved}</p>
-                                        <div className="w-full bg-gray-700 rounded-full h-2 mt-3">
-                                            <div 
-                                                className="bg-yellow-500 h-2 rounded-full transition-all duration-1000" 
-                                                style={{ width: `${totalProblems > 0 ? (user.mediumproblemssolved / totalProblems) * 100 : 0}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/30 rounded-xl p-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-red-400 font-medium">Hard</span>
-                                            <span className="text-red-300 text-sm">●</span>
-                                        </div>
-                                        <p className="text-2xl font-bold text-white">{user && user.hardproblemssolved}</p>
-                                        <div className="w-full bg-gray-700 rounded-full h-2 mt-3">
-                                            <div 
-                                                className="bg-red-500 h-2 rounded-full transition-all duration-1000" 
-                                                style={{ width: `${totalProblems > 0 ? (user.hardproblemssolved / totalProblems) * 100 : 0}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Heatmap */}
-                            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/50 p-6">
-                                <Heatmap />
-                            </div>
-
-                            {/* Recent Activity */}
-                            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/50 p-6">
-                                <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
-                                    <Calendar className="w-6 h-6 mr-3 text-green-400" />
-                                    Recent Activity
-                                </h2>
-                                <div className="space-y-4">
-                                    {[1, 2, 3].map((item) => (
-                                        <div key={item} className="flex items-center p-4 bg-gray-700/50 hover:bg-gray-700/70 rounded-xl transition-colors border border-gray-600/30">
-                                            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mr-4">
-                                                <Calendar className="w-5 h-5 text-blue-400" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-white font-medium">Solved Problem #{item * 123}</p>
-                                                <p className="text-sm text-gray-400">2 hours ago • Medium difficulty</p>
-                                            </div>
-                                            <div className="text-green-400 text-sm font-medium">+10 XP</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Right Sidebar */}
-                        <div className="col-span-12 lg:col-span-4 space-y-6">
-                            {/* Add Friend Section */}
-                            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/50 p-6">
-                                <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
-                                    <Plus className="w-6 h-6 mr-3 text-blue-400" />
-                                    Add Friend
-                                </h2>
-                                <form onSubmit={handlesumbit} className="space-y-4">
-                                    <div className="relative">
-                                        <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                        <input
-                                            type="email"
-                                            value={friendemail}
-                                            onChange={(e) => setFriendEmail(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-xl text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all backdrop-blur-sm"
-                                            placeholder="Enter friend's email"
-                                            required
-                                        />
-                                    </div>
-                                    <button
-                                        type="submit"
-                                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-blue-500/25"
-                                    >
-                                        <Plus className="w-5 h-5 mr-2" />
-                                        Add Friend
-                                    </button>
-                                </form>
-                            </div>
-
-                            {/* Friends List */}
-                            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/50 p-6">
-                                <h2 className="text-xl font-semibold text-white mb-6 flex items-center justify-between">
-                                    <span className="flex items-center">
-                                        <Users className="w-6 h-6 mr-3 text-purple-400" />
-                                        Friends
-                                    </span>
-                                    <span className="bg-purple-500/20 text-purple-300 text-sm px-3 py-1 rounded-full">
-                                        {friends?.length}
-                                    </span>
-                                </h2>
-                                <div className="space-y-3 max-h-64 overflow-y-auto">
-                                    {friends?.length <= 0 ? (
-                                        <div className="text-center py-8">
-                                            <Users className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                                            <p className="text-gray-400">No friends added yet</p>
-                                        </div>
-                                    ) : (
-                                       friends?.length > 0 && friends.map((friend, index) => (
-                                            <div key={index} className="flex items-center p-3 bg-gray-700/30 hover:bg-gray-700/50 rounded-xl transition-colors border border-gray-600/20">
-                                                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mr-3">
-                                                    <User className="w-5 h-5 text-white" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <span className="text-white font-medium">{friend.username}</span>
-                                                    <p className="text-sm text-gray-400">{friend.email}</p>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Notifications Panel */}
-<div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/50 p-6">
-    <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-white flex items-center">
-            <Bell className="w-6 h-6 mr-3 text-yellow-400" />
-            Notifications
+/* ---------- Small reusable pieces ---------- */
+const Card = ({ title, icon: Icon, right, children, className = '' }) => (
+  <section className={`rounded-xl border border-neutral-800 bg-[#141414] p-5 ${className}`}>
+    {title && (
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-white">
+          {Icon && <Icon className="h-5 w-5 text-neutral-400" />}
+          {title}
         </h2>
-        <span className="bg-yellow-500/20 text-yellow-300 text-sm px-3 py-1 rounded-full">
-            {notifications.length}
-        </span>
-    </div>
-    
-    {notifications.length === 0 ? (
-        <div className="text-center py-8">
-            <Bell className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-            <p className="text-gray-400">No new notifications</p>
-        </div>
-    ) : (
-        <div className="relative overflow-hidden">
-            {/* Navigation Buttons */}
-            <div className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10">
-                <button className="notifications-prev bg-gray-800/90 hover:bg-gray-700 rounded-full p-2 shadow-lg transition-all duration-200">
-                    <ChevronLeft className="w-4 h-4 text-white" />
-                </button>
-            </div>
-            
-            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10">
-                <button className="notifications-next bg-gray-800/90 hover:bg-gray-700 rounded-full p-2 shadow-lg transition-all duration-200">
-                    <ChevronRight className="w-4 h-4 text-white" />
-                </button>
-            </div>
-
-            {/* Swiper Container */}
-            <div className="px-2"> {/* Added padding for nav buttons */}
-                <Swiper
-                    modules={[Navigation, Pagination]}
-                    spaceBetween={20}
-                    slidesPerView={1}
-                    navigation={{
-                        prevEl: '.notifications-prev',
-                        nextEl: '.notifications-next',
-                    }}
-                    pagination={{
-                        el: '.notifications-pagination',
-                        clickable: true,
-                        dynamicBullets: true,
-                    }}
-                    loop={notifications.length > 1}
-                    className="w-full"
-                    style={{ 
-                        height: 'auto',
-                        overflow: 'visible'
-                    }}
-                >
-
-                    <style jsx>{`
-    .swiper {
-        width: 100%;
-        height: auto;
-    }
-    
-    .swiper-slide {
-        width: 100% !important;
-        flex-shrink: 0;
-    }
-    
-    .swiper-wrapper {
-        display: flex;
-    }
-    
-    .notifications-pagination .swiper-pagination-bullet {
-        background: #6b7280;
-        opacity: 0.5;
-    }
-    
-    .notifications-pagination .swiper-pagination-bullet-active {
-        background: #3b82f6;
-        opacity: 1;
-    }
-`}</style>
-
-
-                    {notifications.map(({ _id, senderEmail, receiverEmail, createdAt, type }) => (
-                        <SwiperSlide key={_id}>
-                            <div className="bg-gray-700/30 hover:bg-gray-700/50 rounded-xl p-4 transition-all border border-gray-600/20 w-full">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className="flex-1">
-                                        <div className="flex items-center space-x-2">
-                                            <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
-                                                <User className="w-4 h-4 text-white" />
-                                            </div>
-                                            <p className="text-white font-medium">{senderEmail.split('@')[0]}</p>
-                                        </div>
-                                        <p className="text-sm text-gray-300 ml-10">{senderEmail}</p>
-                                        <p className="text-sm text-gray-300 ml-10">
-                                            {type === 'friend_request' ? 'Sent you a friend request' : 'New Friend Request'}
-                                        </p>
-                                        <p className="text-xs text-gray-500 ml-10 mt-1">
-                                            {new Date(createdAt).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex space-x-2">
-                                    <button
-                                        onClick={() => handleAccept(senderEmail, receiverEmail)}
-                                        className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-emerald-500/25"
-                                    >
-                                        Accept
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeny(senderEmail)}
-                                        className="flex-1 bg-gray-600/50 hover:bg-gray-600/70 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 border border-gray-500/30"
-                                    >
-                                        Deny
-                                    </button>
-                                </div>
-                            </div>
-                        </SwiperSlide>
-                    ))}
-                </Swiper>
-            </div>
-            
-            {/* Pagination dots */}
-            {/* <div className="notifications-pagination mt-4 text-center"></div> */}
-        </div>
+        {right}
+      </div>
     )}
-</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </UserProtectWrapper>
-    )
-}
+    {children}
+  </section>
+);
 
-export default Dashboard
+const Stat = ({ icon: Icon, label, value, tint }) => (
+  <div className="rounded-xl border border-neutral-800 bg-[#141414] p-5">
+    <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: `${tint}1f` }}>
+      <Icon className="h-5 w-5" style={{ color: tint }} />
+    </div>
+    <p className="text-3xl font-semibold tabular-nums text-white">{value}</p>
+    <p className="mt-1 text-sm text-neutral-400">{label}</p>
+  </div>
+);
+
+/* ---------- Donut chart (pure SVG, no library) ---------- */
+const Donut = ({ easy, medium, hard }) => {
+  const total = easy + medium + hard;
+  const r = 52;
+  const c = 2 * Math.PI * r;
+  const parts = [
+    { v: easy, color: COLORS.easy, name: "Give Me Story" },
+    { v: medium, color: COLORS.medium, name: "Give Me Balanced" },
+    { v: hard, color: COLORS.hard, name: "Give Me Code Of War" },
+  ];
+  let offset = 0;
+
+  return (
+    <div className="flex flex-wrap items-center gap-8">
+      <svg viewBox="0 0 140 140" className="h-40 w-40 -rotate-90">
+        <circle cx="70" cy="70" r={r} fill="none" stroke="#262626" strokeWidth="14" />
+        {total > 0 &&
+          parts.map((p) => {
+            if (p.v <= 0) return null;
+            const len = (p.v / total) * c;
+            const currentOffset = offset;
+            offset += len;
+            return (
+              <circle key={p.name} cx="70" cy="70" r={r} fill="none" stroke={p.color} strokeWidth="14"
+                strokeDasharray={`${len} ${c}`} strokeDashoffset={-currentOffset} strokeLinecap="butt" />
+            );
+          })}
+        <g className="rotate-90" style={{ transformOrigin: "70px 70px" }}>
+          <text x="70" y="70" textAnchor="middle" fill="#fff" fontSize="26" fontWeight="600">{total}</text>
+          <text x="70" y="88" textAnchor="middle" fill="#a3a3a3" fontSize="10">Solved</text>
+        </g>
+      </svg>
+
+      <ul className="flex-1 space-y-4 min-w-[160px]">
+        {parts.map((p) => (
+          <li key={p.name}>
+            <div className="mb-1.5 flex justify-between text-sm">
+              <span className="font-medium" style={{ color: p.color }}>{p.name}</span>
+              <span className="tabular-nums text-neutral-300">{p.v}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-neutral-800">
+              <div className="h-1.5 rounded-full transition-[width] duration-700"
+                style={{ width: `${total ? (p.v / total) * 100 : 0}%`, backgroundColor: p.color }} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+/* ---------- Bar chart (pure SVG) ---------- */
+const Bars = ({ data }) => {
+  const max = Math.max(...data.map((d) => d.value), 1);
+  const H = 140, W = 100 / data.length;
+  return (
+    <div>
+      <svg viewBox={`0 0 100 ${H + 18}`} preserveAspectRatio="none" className="h-44 w-full">
+        {[0, 0.5, 1].map((t) => (
+          <line key={t} x1="0" x2="100" y1={H - t * H} y2={H - t * H} stroke="#262626" strokeWidth="0.3" />
+        ))}
+        {data.map((d, i) => {
+          const h = (d.value / max) * (H - 10);
+          return (
+            <g key={d.label}>
+              <title>{`${d.label}: ${d.value}`}</title>
+              <rect x={i * W + W * 0.22} y={H - h} width={W * 0.56} height={Math.max(h, 1.5)} rx="1.2"
+                fill={d.value ? '#22c55e' : '#262626'} />
+            </g>
+          );
+        })}
+      </svg>
+      <div className="mt-1 flex">
+        {data.map((d) => (
+          <span key={d.label} className="flex-1 text-center text-xs text-neutral-500">{d.label}</span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ---------- Page ---------- */
+const Dashboard = () => {
+  const [friendemail, setFriendEmail] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [friends, setFriends] = useState([]);
+  const [recentSolved, setRecentSolved] = useState([]);
+  const [range, setRange] = useState('week');
+  const [sending, setSending] = useState(false);
+  const [formStatus, setFormStatus] = useState(null); // { ok, text }
+  const [busyEmail, setBusyEmail] = useState(null);
+
+  const { user } = useContext(UserDataContext);
+  console.log("frontend user : ", user);
+  const { socket } = useContext(LobbyDataContext);
+  const userId = user?._id;
+  const email = user?.email;
+
+  /* ----- Data fetching ----- */
+  const fetchNotifications = useCallback(async (signal) => {
+    try {
+      const { data } = await axios.get('/api/getnotifications', { withCredentials: true, signal });
+      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+    } catch (err) {
+      if (!axios.isCancel(err)) console.error('Failed to load notifications', err);
+    }
+  }, []);
+
+  const fetchFriends = useCallback(async (signal) => {
+    try {
+      const { data } = await axios.get('/api/friends', { withCredentials: true, signal });
+      setFriends(Array.isArray(data.friends) ? data.friends : []);
+    } catch (err) {
+      if (!axios.isCancel(err)) console.error('Failed to load friends', err);
+    }
+  }, []);
+
+  const fetchRecentSolved = useCallback(async (signal) => {
+    try {
+      const { data } = await axios.get('/api/recent-solved?limit=5', { withCredentials: true, signal });
+      setRecentSolved(Array.isArray(data.items) ? data.items : []);
+    } catch (err) {
+      if (!axios.isCancel(err)) console.error('Failed to load recent activity', err);
+    }
+  }, []);
+
+  const loadAll = useCallback(
+    (signal) => Promise.allSettled([fetchNotifications(signal), fetchFriends(signal), fetchRecentSolved(signal)]),
+    [fetchNotifications, fetchFriends, fetchRecentSolved]
+  );
+
+  // Initial load
+  useEffect(() => {
+    if (!userId) return;
+    const controller = new AbortController();
+    loadAll(controller.signal);
+    return () => controller.abort();
+  }, [userId, loadAll]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+        fetchFriends();
+      }
+    };
+    const onFriendsChanged = () => {
+      fetchNotifications();
+      fetchFriends();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener(FRIENDS_EVENT, onFriendsChanged);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener(FRIENDS_EVENT, onFriendsChanged);
+    };
+  }, [userId, fetchNotifications, fetchFriends]);
+
+  // Real-time socket updates
+  useEffect(() => {
+    if (!socket || !userId) return;
+    const onRequest = () => fetchNotifications();
+    const onListChanged = () => {
+      fetchFriends();
+      fetchNotifications();
+    };
+    const onReconnect = () => loadAll();
+    socket.on('addFriendRequestReceived', onRequest);
+    socket.on('friend-list-changed', onListChanged);
+    socket.on('connect', onReconnect);
+    return () => {
+      socket.off('addFriendRequestReceived', onRequest);
+      socket.off('friend-list-changed', onListChanged);
+      socket.off('connect', onReconnect);
+    };
+  }, [socket, userId, fetchNotifications, fetchFriends, loadAll]);
+
+  /* ----- Actions ----- */
+  const handleAccept = async (senderEmail) => {
+    if (busyEmail) return;
+    setBusyEmail(senderEmail);
+    try {
+      await acceptFriendRequest(senderEmail, socket);
+      setNotifications((prev) => prev.filter((n) => n.senderEmail !== senderEmail));
+    } catch (err) {
+      console.error(errorMessage(err, 'Could not accept request'), err);
+      fetchNotifications(); // stale होने पर list ठीक कर दो
+    } finally {
+      setBusyEmail(null);
+    }
+  };
+
+  const handleDeny = async (senderEmail) => {
+    if (busyEmail) return;
+    setBusyEmail(senderEmail);
+    try {
+      await denyFriendRequest(senderEmail);
+      setNotifications((prev) => prev.filter((n) => n.senderEmail !== senderEmail));
+    } catch (err) {
+      console.error(errorMessage(err, 'Could not remove request'), err);
+      fetchNotifications();
+    } finally {
+      setBusyEmail(null);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email || sending) return;
+    setSending(true);
+    setFormStatus(null);
+    const res = await sendFriendRequest(socket, email, friendemail.trim());
+    setFormStatus({ ok: !!res.ok, text: res.message });
+    if (res.ok) {
+      setFriendEmail('');
+      if (res.accepted) fetchFriends();
+    }
+    setSending(false);
+  };
+
+  /* ----- Derived data ----- */
+  const easy = user?.easyproblemssolved || 0;
+  const medium = user?.mediumproblemssolved || 0;
+  const hard = user?.hardproblemssolved || 0;
+  const totalProblems = easy + medium + hard;
+
+  const { week, months } = useMemo(() => {
+    const counts = {};
+    (user?.submissionDates || []).forEach((d) => { counts[d] = (counts[d] || 0) + 1; });
+
+    const week = [...Array(7)].map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return { label: d.toLocaleDateString('en', { weekday: 'short' }), value: counts[iso(d)] || 0 };
+    });
+
+    const months = [...Array(6)].map((_, i) => {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - (5 - i));
+      const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const value = Object.entries(counts).reduce((s, [k, v]) => (k.startsWith(prefix) ? s + v : s), 0);
+      return { label: d.toLocaleDateString('en', { month: 'short' }), value };
+    });
+
+    return { week, months };
+  }, [user?.submissionDates]);
+
+  return (
+    <UserProtectWrapper>
+      <div className="min-h-screen bg-[#0a0a0a] text-neutral-200">
+        {/* Header */}
+        <header className="sticky top-0 z-20 border-b border-neutral-800 bg-[#0a0a0a]/85 backdrop-blur">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/15">
+                <Crown className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-white">Dashboard</h1>
+                <p className="text-sm text-neutral-400">Welcome back, {user?.username}</p>
+              </div>
+            </div>
+            <div className="relative rounded-lg p-2 hover:bg-neutral-800">
+              <Bell className="h-5 w-5 text-neutral-400" />
+              {notifications.length > 0 && (
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                  {notifications.length}
+                </span>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-3">
+          {/* Main column */}
+          <div className="space-y-6 lg:col-span-2">
+            {/* Profile + stats */}
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div className="col-span-2 flex flex-col gap-4 rounded-xl border border-neutral-800 bg-[#141414] p-4 sm:flex-row sm:items-center sm:p-5 md:col-span-4">
+                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 sm:h-14 sm:w-14">
+                    <User className="h-6 w-6 text-white sm:h-7 sm:w-7" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold text-white sm:text-xl">{user?.username}</p>
+                    <p className="truncate text-xs text-neutral-400 sm:text-sm">{email}</p>
+                  </div>
+                </div>
+                <span className="flex w-fit shrink-0 items-center gap-2 rounded-full bg-neutral-800 px-3 py-1.5 text-xs text-neutral-300 sm:ml-auto sm:text-sm">
+                  <Swords className="h-4 w-4 text-blue-400" />
+                  Code of War
+                </span>
+              </div>
+              <Stat icon={Target} label="Problems solved" value={totalProblems} tint="#60a5fa" />
+              <Stat icon={Flame} label="Current streak" value={user?.streak?.current ?? 0} tint="#f97316" />
+              <Stat icon={Trophy} label="Best streak" value={user?.streak?.max ?? 0} tint="#eab308" />
+              <Stat icon={Users} label="Friends" value={friends.length} tint="#a78bfa" />
+            </div>
+
+            <Heatmap />
+
+            {/* Charts */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <Card title="Difficulty breakdown" icon={Target}>
+                <Donut easy={easy} medium={medium} hard={hard} />
+              </Card>
+              <Card
+                title="Submissions"
+                right={
+                  <div className="flex rounded-lg bg-neutral-800 p-0.5 text-xs">
+                    {[['week', '7 days'], ['month', '6 months']].map(([k, l]) => (
+                      <button key={k} onClick={() => setRange(k)}
+                        className={`rounded-md px-3 py-1 transition-colors ${range === k ? 'bg-neutral-600 text-white' : 'text-neutral-400 hover:text-white'}`}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                }
+              >
+                <Bars data={range === 'week' ? week : months} />
+              </Card>
+            </div>
+
+            <Card title="Recent activity">
+              {recentSolved.length === 0 ? (
+                <p className="py-6 text-center text-sm text-neutral-500">No solved problems yet. Solve a problem to see it here.</p>
+              ) : (
+                <ul className="divide-y divide-neutral-800">
+                  {recentSolved.map((item) => (
+                    <li key={item.id} className="flex items-center justify-between gap-4 py-3 text-sm">
+                      <div className="min-w-0">
+                        <p className="truncate text-neutral-200">{item.title}</p>
+                        {item.difficulty && (
+                          <p className="text-xs capitalize" style={{ color: COLORS[item.difficulty] || '#a3a3a3' }}>
+                            {item.difficulty}
+                          </p>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-xs text-neutral-400">
+                        {new Date(item.solvedAt).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <aside className="space-y-6">
+            <Card title="Add friend" icon={UserPlus}>
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                  <input
+                    type="email" required value={friendemail}
+                    onChange={(e) => { setFriendEmail(e.target.value); if (formStatus) setFormStatus(null); }}
+                    placeholder="Friend's email"
+                    className="w-full rounded-lg border border-neutral-800 bg-[#0a0a0a] py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-neutral-500 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <button type="submit" disabled={sending}
+                  className="w-full rounded-lg bg-blue-500 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600 disabled:opacity-60">
+                  {sending ? 'Sending...' : 'Send Request'}
+                </button>
+                {formStatus && (
+                  <p role="status" className={`text-sm ${formStatus.ok ? 'text-green-400' : 'text-red-400'}`}>
+                    {formStatus.text}
+                  </p>
+                )}
+              </form>
+            </Card>
+
+            <Card title="Friend requests" icon={Bell}
+              right={<span className="rounded-full bg-neutral-800 px-2.5 py-0.5 text-xs">{notifications.length}</span>}>
+              {notifications.length === 0 ? (
+                <p className="py-4 text-center text-sm text-neutral-500">No pending requests</p>
+              ) : (
+                <ul className="space-y-3 max-h-80 overflow-y-auto">
+                  {notifications.map(({ _id, senderEmail, createdAt }) => (
+                    <li key={_id} className="rounded-lg border border-neutral-800 bg-[#0a0a0a] p-3">
+                      <p className="text-sm font-medium text-white">{senderEmail.split('@')[0]}</p>
+                      <p className="text-xs text-neutral-500">{senderEmail} · {new Date(createdAt).toLocaleDateString()}</p>
+                      <div className="mt-3 flex gap-2">
+                        <button onClick={() => handleAccept(senderEmail)} disabled={busyEmail === senderEmail}
+                          className="flex flex-1 items-center justify-center gap-1 rounded-md bg-green-600 py-1.5 text-sm text-white hover:bg-green-500 disabled:opacity-60">
+                          <Check className="h-4 w-4" /> Accept
+                        </button>
+                        <button onClick={() => handleDeny(senderEmail)} disabled={busyEmail === senderEmail}
+                          className="flex flex-1 items-center justify-center gap-1 rounded-md bg-neutral-800 py-1.5 text-sm text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">
+                          <X className="h-4 w-4" /> Deny
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+
+            <Card title="Friends" icon={Users}
+              right={<span className="rounded-full bg-neutral-800 px-2.5 py-0.5 text-xs">{friends.length}</span>}>
+              {friends.length === 0 ? (
+                <p className="py-4 text-center text-sm text-neutral-500">No friends yet. Send a request above.</p>
+              ) : (
+                <ul className="max-h-72 space-y-2 overflow-y-auto">
+                  {friends.map((f) => (
+                    <li key={f._id || f.email} className="flex items-center gap-3 rounded-lg p-2 hover:bg-neutral-800/60">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500/20 text-sm font-semibold text-violet-300">
+                        {f.username?.[0]?.toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-white">{f.username}</p>
+                        <p className="truncate text-xs text-neutral-500">{f.email}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </aside>
+        </main>
+      </div>
+    </UserProtectWrapper>
+  );
+};
+
+export default Dashboard;

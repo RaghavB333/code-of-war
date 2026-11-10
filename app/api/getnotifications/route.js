@@ -1,28 +1,21 @@
 import connectDB from "@/lib/mongoose";
 import userModel from "@/models/user.model";
-const {validationResult} = require('express-validator');
+import { authUser } from "@/app/middlewares/auth.middleware";
 
-export async function POST(req, res) {
+export async function GET(req, res) {
   // Connect to the database
   await connectDB();
+  const { user, error } = await authUser(req);
+  if (error) return error;
+  // const userId = user._id;
+  // const user = await userModel.findById(userId);
 
 
-  const errors = validationResult(req);
-  if(!errors.isEmpty())
-  {
-    return new Response(
-        JSON.stringify({ errors: errors.array() }),
-        { status: 400 }
-      );
-  }
+  const notifications = (user.notifications || [])
+  .filter((n) => n.status === 'pending')
+  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  const body = await req.json();
-  
-    const {email} = body;
-
-  const user = await userModel.findOne({email});
-
-  const notifications = user.notifications;
+  // const notifications = user.notifications;
 
   if(notifications)
   {
@@ -34,7 +27,7 @@ export async function POST(req, res) {
   else
   {
     return new Response(
-        JSON.stringify({ message: "Not any notifications"}),
+        JSON.stringify({ message: "No notifications"}),
         { status: 400 }
       );
   }

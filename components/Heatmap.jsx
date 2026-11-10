@@ -1,163 +1,132 @@
 "use client"
-import React from 'react';
-import CalendarHeatmap from 'react-calendar-heatmap';
-import 'react-calendar-heatmap/dist/styles.css';
-import { subDays } from 'date-fns';
-import axios from 'axios';
-import { useState, useEffect, useContext } from 'react';
+
+import React, { useContext, useMemo, useState } from 'react';
 import { UserDataContext } from '@/context/UserContext';
+import { ChevronDown } from 'lucide-react';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const LEVELS = ['#262626', '#166534', '#16a34a', '#22c55e', '#4ade80'];
+
+const key = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Build month blocks. Each block = columns (weeks) x 7 rows (Sun..Sat).
+function buildMonths(start, end) {
+  const blocks = [];
+  const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  while (cur <= end) {
+    const y = cur.getFullYear();
+    const m = cur.getMonth();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const offset = new Date(y, m, 1).getDay();
+    const cols = [];
+    for (let i = 0; i < offset + daysInMonth; i++) {
+      const col = Math.floor(i / 7);
+      if (!cols[col]) cols[col] = Array(7).fill(null);
+      const day = i - offset + 1;
+      if (day >= 1) {
+        const date = new Date(y, m, day);
+        if (date >= start && date <= end) cols[col][i % 7] = date;
+      }
+    }
+    blocks.push({ label: MONTHS[m], year: y, cols });
+    cur.setMonth(m + 1);
+  }
+  return blocks;
+}
 
 const Heatmap = () => {
-  const [submissionDates, setSubmissionDates] = useState([]);
-  const endDate = new Date();
-  const startDate = subDays(endDate, 180); // last 6 months
-
   const { user } = useContext(UserDataContext);
+  const [view, setView] = useState('current');
+  const thisYear = new Date().getFullYear();
 
-  const getsubmissiondates = async () => {
-    const username = user.email;
-    const response = await axios.get(`/api/getsubmissiondates?username=${username}`);
-    console.log("submission-dates : ", response.data);
-    setSubmissionDates(response.data.submissionDates);
-  }
+  const counts = useMemo(() => {
+    const map = {};
+    (user?.submissionDates || []).forEach((d) => { map[d] = (map[d] || 0) + 1; });
+    return map;
+  }, [user?.submissionDates]);
 
-  useEffect(() => {
-    getsubmissiondates();
-  }, []);
+  const { blocks, total, activeDays } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let start, end;
+    if (view === 'current') {
+      end = today;
+      start = new Date(today.getFullYear() - 1, today.getMonth() + 1, 1);
+    } else {
+      start = new Date(Number(view), 0, 1);
+      end = new Date(Number(view), 11, 31);
+    }
+    const blocks = buildMonths(start, end);
+    let total = 0, activeDays = 0;
+    blocks.forEach((b) => b.cols.forEach((c) => c.forEach((d) => {
+      if (d && counts[key(d)]) { total += counts[key(d)]; activeDays++; }
+    })));
+    return { blocks, total, activeDays };
+  }, [view, counts]);
 
-  // Map submissionDates to format needed
-  const values = submissionDates.map(date => ({
-    date,
-    count: 1,
-  }));
+  const level = (n) => (!n ? 0 : n >= 6 ? 4 : n >= 4 ? 3 : n >= 2 ? 2 : 1);
 
   return (
-    <div className="my-2 p-3 bg-gray-900 rounded-md shadow-md">
-      <div className="mb-2">
-        <h2 className="text-sm font-medium text-white mb-1 flex items-center gap-1">
-          🔥 Submission Streak
-        </h2>
-      </div>
-      
-      <div className="heatmap-container">
-        <CalendarHeatmap
-          startDate={startDate}
-          endDate={endDate}
-          values={values}
-          showWeekdayLabels
-          showMonthLabels
-          gutterSize={1}
-          horizontal={true}
-          classForValue={(value) => {
-            if (!value || !value.count) {
-              return 'color-empty';
-            }
-            return 'color-filled';
-          }}
-          transformDayElement={(rect, value, index) => {
-            return React.cloneElement(rect, {
-              rx: 1,
-              ry: 1,
-              width: 6,
-              height: 6,
-              style: {
-                fill: value && value.count ? '#22c55e' : '#1f2937',
-                stroke: 'none',
-              },
-            });
-          }}
-        />
-      </div>
-
-      <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
-        <span>Less</span>
-        <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-sm bg-gray-700"></div>
-          <div className="w-1.5 h-1.5 rounded-sm bg-green-200"></div>
-          <div className="w-1.5 h-1.5 rounded-sm bg-green-400"></div>
-          <div className="w-1.5 h-1.5 rounded-sm bg-green-500"></div>
-          <div className="w-1.5 h-1.5 rounded-sm bg-green-600"></div>
+    <div className="rounded-xl border border-neutral-800 bg-[#141414] p-5">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-neutral-300">
+          <span className="text-2xl font-semibold text-white">{total}</span>
+          <span>submissions in {view === 'current' ? 'the past one year' : view}</span>
         </div>
-        <span>More</span>
+        <div className="flex items-center gap-5 text-sm text-neutral-400">
+          <span>Total active days: <b className="text-neutral-200">{activeDays}</b></span>
+          <span>Max streak: <b className="text-neutral-200">{user?.streak?.max ?? 0}</b></span>
+          <div className="relative">
+            <select
+              value={view}
+              onChange={(e) => setView(e.target.value)}
+              className="cursor-pointer appearance-none rounded-lg bg-neutral-800 py-2 pl-4 pr-9 text-sm text-neutral-200 outline-none hover:bg-neutral-700 focus-visible:ring-2 focus-visible:ring-green-500"
+            >
+              <option value="current">Current</option>
+              {[thisYear, thisYear - 1, thisYear - 2].map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+          </div>
+        </div>
       </div>
 
-      <style jsx>{`
-        .heatmap-container {
-          background: #0d1117;
-          border-radius: 4px;
-          padding: 6px;
-          height: 280px;
-        }
-        
-        .react-calendar-heatmap {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          width: 100%;
-          max-width: 600px;
-        }
-        
-        .react-calendar-heatmap .react-calendar-heatmap-month-label {
-          font-size: 4px;
-          fill: #7d8590;
-        }
-        
-        .react-calendar-heatmap .react-calendar-heatmap-weekday-label {
-          font-size: 4px;
-          fill: #7d8590;
-        }
-        
-        .react-calendar-heatmap rect {
-          transition: all 0.1s ease;
-        }
-        
-        .react-calendar-heatmap rect:hover {
-          stroke: #30363d;
-          stroke-width: 1;
-        }
-        
-        /* Add spacing between months */
-        .react-calendar-heatmap .react-calendar-heatmap-month:not(:first-child) {
-          margin-left: 10px;
-        }
-        
-        /* Compact size */
-        .react-calendar-heatmap svg {
-          width: 100%;
-          height: auto;
-          max-height: 90px;
-        }
-        
-        /* Custom colors matching GitHub style */
-        .color-empty {
-          fill: #161b22;
-        }
-        
-        .color-filled {
-          fill: #22c55e;
-        }
-        
-        @media (max-width: 768px) {
-          .heatmap-container {
-            font-size: 8px;
-            padding: 4px;
-          }
-          
-          .react-calendar-heatmap .react-calendar-heatmap-month-label {
-            font-size: 7px;
-          }
-          
-          .react-calendar-heatmap .react-calendar-heatmap-weekday-label {
-            font-size: 6px;
-          }
-          
-          .react-calendar-heatmap .react-calendar-heatmap-month:not(:first-child) {
-            margin-left: 6px;
-          }
-          
-          .react-calendar-heatmap svg {
-            max-height: 70px;
-          }
-        }
-      `}</style>
+      <div className="overflow-x-auto pb-2 [scrollbar-width:thin]
+        [scrollbar-color:#404040_#171717]
+        [&::-webkit-scrollbar]:h-1.5
+        [&::-webkit-scrollbar-track]:rounded-full
+        [&::-webkit-scrollbar-track]:bg-neutral-900
+        [&::-webkit-scrollbar-thumb]:rounded-full
+        [&::-webkit-scrollbar-thumb]:bg-neutral-700
+        [&::-webkit-scrollbar-thumb:hover]:bg-neutral-600">
+        <div className="flex min-w-max justify-between gap-3">
+          {blocks.map((b) => (
+            <div key={`${b.label}-${b.year}`} className="flex flex-col items-center gap-3">
+              <div className="flex gap-[3px]">
+                {b.cols.map((col, ci) => (
+                  <div key={ci} className="flex flex-col gap-[3px]">
+                    {col.map((date, ri) => {
+                      if (!date) return <div key={ri} className="h-3 w-3" />;
+                      const n = counts[key(date)] || 0;
+                      return (
+                        <div
+                          key={ri}
+                          title={`${n} submission${n === 1 ? '' : 's'} on ${date.toDateString()}`}
+                          className="h-3 w-3 rounded-[3px]"
+                          style={{ backgroundColor: LEVELS[level(n)] }}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              <span className="text-sm text-neutral-400">{b.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

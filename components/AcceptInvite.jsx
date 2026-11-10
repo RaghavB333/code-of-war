@@ -1,108 +1,38 @@
-// "use client";
-// import { useState, useEffect, useContext } from "react";
-// import { LobbyDataContext } from "@/context/LobbyContext";
-// import { X } from "lucide-react"; // icon library (npm install lucide-react)
-
-// export default function AcceptInvite() {
-//   const { socket } = useContext(LobbyDataContext);
-//   const [open, setOpen] = useState(false);
-//   const [email, setEmail] = useState("");
-//   const [progress, setProgress] = useState(100);
-//   const DURATION = 7000; // 7 seconds
-
-//   useEffect(() => {
-//     if (!socket) return;
-
-//     socket.on("addFriendRequestReceived", (email) => {
-//       setEmail(email);
-//       setOpen(true);
-//       setProgress(100);
-
-//       // Animate progress bar
-//       let start = Date.now();
-//       const interval = setInterval(() => {
-//         let elapsed = Date.now() - start;
-//         let percent = Math.max(0, 100 - (elapsed / DURATION) * 100);
-//         setProgress(percent);
-
-//         if (percent <= 0) {
-//           clearInterval(interval);
-//           setOpen(false);
-//         }
-//       }, 100);
-
-//       return () => clearInterval(interval);
-//     });
-//   }, [socket]);
-
-//   const handleClose = () => {
-//     setOpen(false);
-//     setProgress(0);
-//   };
-
-//   return (
-//     <div
-//       className={`fixed bottom-5 z-50 right-5 w-[320px] bg-black text-white border rounded-xl shadow-lg p-4 
-//         transform transition-all duration-500 ease-in-out
-//         ${open ? "translate-x-0 opacity-100" : "translate-x-96 opacity-0"}
-//       `}
-//     >
-//       {/* Close Button */}
-//       <button
-//         className="absolute top-2 right-2 text-gray-400 hover:text-white"
-//         onClick={handleClose}
-//       >
-//         <X size={18} />
-//       </button>
-
-//       {/* Content */}
-//       <h2 className="text-lg font-semibold">Friend Request</h2>
-//       <p className="text-gray-300">{email || "test@test.com"}</p>
-
-//       <div className="flex gap-x-2 mt-3">
-//         <button className="bg-slate-200 text-black px-3 py-1 rounded">
-//           Cancel
-//         </button>
-//         <button className="bg-green-600 px-3 py-1 rounded">Accept</button>
-//       </div>
-
-//       {/* Progress Bar */}
-//       <div className="w-full h-1 bg-gray-700 mt-3 rounded overflow-hidden">
-//         <div
-//           className="h-1 bg-green-500 transition-all duration-100 linear"
-//           style={{ width: `${progress}%` }}
-//         />
-//       </div>
-//     </div>
-//   );
-// }
-
 "use client";
-import { useState, useEffect, useContext, useRef } from "react";
+
+import { useState, useEffect, useContext, useRef, useCallback } from "react";
 import { LobbyDataContext } from "@/context/LobbyContext";
 import { UserDataContext } from "@/context/UserContext";
 import { X } from "lucide-react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import {
+  FRIENDS_EVENT,
+  acceptFriendRequest,
+  denyFriendRequest,
+  errorMessage,
+} from "@/lib/friendActions";
+
+const DURATION = 30_000;
+const SEEN_KEY = "seenLobbyInvites";
 
 export default function AcceptInvite() {
   const { socket } = useContext(LobbyDataContext);
-  const {user} = useContext(UserDataContext);
+  const { user } = useContext(UserDataContext);
   const router = useRouter();
 
   const [notifications, setNotifications] = useState([]);
-  const [progressMap, setProgressMap] = useState({});
-  const [isLobbyInvite, setIsLobbyInvite] = useState(false);
-  const [lobbyId, setLobbyId] = useState('');
-  const DURATION = 7000; // 7 seconds
 
-  // 🔊 Keep one audio object and unlock it after first click
   const audioRef = useRef(null);
+  const timersRef = useRef(new Map());
+  // toast id -> dedupe key ("lobby:<id>" ya "friend:<email>")
+  const keyOfRef = useRef(new Map());
+  const counter = useRef(0);
 
+  // Notification sound setup
   useEffect(() => {
     audioRef.current = new Audio("/notification.mp3");
 
-    // Unlock audio on first click
     const unlock = () => {
       if (audioRef.current) {
         audioRef.current.play().catch(() => {});
@@ -116,131 +46,192 @@ export default function AcceptInvite() {
 
     return () => {
       window.removeEventListener("click", unlock);
+      audioRef.current = null;
     };
   }, []);
 
-      const handleAccept = async (senderEmail) => {
-        if(!isLobbyInvite){
-          const data = {
-              senderEmail: senderEmail,
-              receiverEmail: user.email
-          }
-          const response = await axios.post('api/acceptrequest', data);
-          console.log(response.data);
-        }
-        else{
-          socket.emit('accept-invite', {
-            lobbyId: lobbyId,
-            id: user._id
-          }, (response) => {
-            if (response.success) {
-              router.push(`/lobby/${response.lobbyId}`);
-            }
-          });
-        }
+  // Clear all timers on unmount
+  useEffect(() => {
+    const timers = timersRef.current;
+    const keys = keyOfRef.current;
+    return () => {
+      timers.forEach((timer) => {
+        clearTimeout(timer.autoClose);
+        cancelAnimationFrame(timer.raf1);
+        cancelAnimationFrame(timer.raf2);
+      });
+      timers.clear();
+      keys.clear();
+    };
+  }, []);
+
+  const update = useCallback((id, patch) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, ...patch } : n))
+    );
+  }, []);
+
+  // Sirf toast band karta hai. Friend request dashboard me pending rehti hai.
+  const handleClose = useCallback((id) => {
+    const timer = timersRef.current.get(id);
+    if (timer) {
+      clearTimeout(timer.autoClose);
+      cancelAnimationFrame(timer.raf1);
+      cancelAnimationFrame(timer.raf2);
+    }
+    timersRef.current.delete(id);
+    keyOfRef.current.delete(id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const push = useCallback(
+    (data) => {
+      const key =
+        data.type === "lobby" ? `lobby:${data.lobbyId}` : `friend:${data.email}`;
+
+      // Duplicate toast mat dikhao
+      if ([...keyOfRef.current.values()].includes(key)) return;
+
+      const id = `${Date.now()}-${counter.current++}`;
+      keyOfRef.current.set(id, key);
+
+      setNotifications((prev) => [
+        ...prev,
+        { id, running: false, busy: false, error: null, ...data },
+      ]);
+
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
       }
 
+      const raf1 = requestAnimationFrame(() => {
+        const raf2 = requestAnimationFrame(() => {
+          update(id, { running: true });
+        });
+        const timer = timersRef.current.get(id);
+        if (timer) timer.raf2 = raf2;
+      });
 
-      const handleDeny = async(senderEmail) => {
-        if(!isLobbyInvite){
-          try{
-              const response = await axios.put('/api/denyrequest', {senderEmail: senderEmail}, {withCredentials:true});
-              if(response.status == 200){
-                  console.log(response.data);
-                  getFriends();
-                  // getnotifications();
-              }
-          }catch(error){
-              console.log(error);
-          }
-        }
-    }
+      const autoClose = setTimeout(() => handleClose(id), DURATION);
+      timersRef.current.set(id, { autoClose, raf1, raf2: null });
+    },
+    [handleClose, update]
+  );
 
+  // Socket events (real-time)
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("addFriendRequestReceived", (email) => {
-      const id = Date.now();
-      const newNotification = { id, email };
+    const onFriendRequest = (email) => push({ type: "friend", email });
+    const onLobbyInvite = (invite) =>
+      push({
+        type: "lobby",
+        lobbyId: invite.id,
+        title: invite.title,
+        from: invite.from,
+      });
 
-      setNotifications((prev) => [...prev, newNotification]);
-      setProgressMap((prev) => ({ ...prev, [id]: 100 }));
+    socket.on("addFriendRequestReceived", onFriendRequest);
+    socket.on("invite:received", onLobbyInvite);
 
-      // Play notification sound
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => {});
+    return () => {
+      socket.off("addFriendRequestReceived", onFriendRequest);
+      socket.off("invite:received", onLobbyInvite);
+    };
+  }, [socket, push]);
+
+  // Dashboard se accept/deny hua to us friend ka toast hata do
+  useEffect(() => {
+    const onChanged = (e) => {
+      const email = e.detail?.email;
+      if (!email) return;
+      [...keyOfRef.current.entries()].forEach(([id, key]) => {
+        if (key === `friend:${email}`) handleClose(id);
+      });
+    };
+    window.addEventListener(FRIENDS_EVENT, onChanged);
+    return () => window.removeEventListener(FRIENDS_EVENT, onChanged);
+  }, [handleClose]);
+
+  // Pending lobby invitations
+  useEffect(() => {
+    if (!user?._id) return;
+
+    let cancelled = false;
+
+    axios
+      .get("/api/playground/mine")
+      .then(({ data }) => {
+        if (cancelled) return;
+
+        let seen = [];
+        try {
+          seen = JSON.parse(sessionStorage.getItem(SEEN_KEY) || "[]");
+        } catch {}
+
+        (data.invites ?? []).forEach((invite) => {
+          if (seen.includes(invite.id)) return;
+          seen.push(invite.id);
+          push({
+            type: "lobby",
+            lobbyId: invite.id,
+            title: invite.title,
+            from: invite.from,
+          });
+        });
+
+        try {
+          sessionStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+        } catch {}
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?._id, push]);
+
+  const handleAccept = async (n) => {
+    update(n.id, { busy: true, error: null });
+
+    try {
+      if (n.type === "friend") {
+        await acceptFriendRequest(n.email, socket);
+        handleClose(n.id);
+        return;
       }
 
-      // Progress countdown
-      let start = Date.now();
-      const interval = setInterval(() => {
-        let elapsed = Date.now() - start;
-        let percent = Math.max(0, 100 - (elapsed / DURATION) * 100);
-        setProgressMap((prev) => ({ ...prev, [id]: percent }));
+      await axios.post(`/api/playground/${n.lobbyId}/respond`, { accept: true });
+      handleClose(n.id);
+      router.push(`/party/${n.lobbyId}`);
+    } catch (error) {
+      update(n.id, {
+        busy: false,
+        error: errorMessage(
+          error,
+          n.type === "friend" ? "Couldn't accept this request." : "Couldn't join this lobby."
+        ),
+      });
+    }
+  };
 
-        if (percent <= 0) {
-          clearInterval(interval);
-          handleClose(id);
-        }
-      }, 100);
-    });
+  const handleDeny = async (n) => {
+    update(n.id, { busy: true, error: null });
 
-    const handleInvite = (data) => {
-      setIsLobbyInvite(true);
-      setLobbyId(data.lobbyId);
-      const id = Date.now();
-      const newNotification = { id, email: data.inviterEmail };
-
-      setNotifications((prev) => [...prev, newNotification]);
-      setProgressMap((prev) => ({ ...prev, [id]: 100 }));
-
-      // Play notification sound
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => {});
+    try {
+      if (n.type === "friend") {
+        await denyFriendRequest(n.email);
+      } else {
+        await axios.post(`/api/playground/${n.lobbyId}/respond`, { accept: false });
       }
-
-      // Progress countdown
-      let start = Date.now();
-      const interval = setInterval(() => {
-        let elapsed = Date.now() - start;
-        let percent = Math.max(0, 100 - (elapsed / DURATION) * 100);
-        setProgressMap((prev) => ({ ...prev, [id]: percent }));
-
-        if (percent <= 0) {
-          clearInterval(interval);
-          handleClose(id);
-        }
-      }, 100);
-
-
-
-        // console.log("received invite", data);
-        // if (confirm(`${data.inviterEmail} invited you to a lobby`)) {
-        //   socket.emit('accept-invite', {
-        //     lobbyId: data.lobbyId,
-        //     id: user._id
-        //   }, (response) => {
-        //     if (response.success) {
-        //       router.push(`/lobby/${response.lobbyId}`);
-        //     }
-        //   });
-        // }
-      };
-
-      socket.on('receive-invite', handleInvite);
-
-  }, [socket]);
-
-  const handleClose = (id) => {
-    setIsLobbyInvite(false);
-    setLobbyId('');
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    setProgressMap((prev) => {
-      const { [id]: _, ...rest } = prev;
-      return rest;
-    });
+      handleClose(n.id);
+    } catch (error) {
+      update(n.id, {
+        busy: false,
+        error: errorMessage(error, "Couldn't process your request."),
+      });
+    }
   };
 
   return (
@@ -248,35 +239,55 @@ export default function AcceptInvite() {
       {notifications.map((n) => (
         <div
           key={n.id}
-          className={`relative w-[320px] bg-black text-white border rounded-xl shadow-lg p-4
-            transform transition-all duration-500 ease-in-out
-            translate-x-0 opacity-100
-          `}
+          role="alert"
+          className="relative w-[320px] bg-black text-white border rounded-xl shadow-lg p-4"
         >
-          {/* Close Button */}
           <button
             className="absolute top-2 right-2 text-gray-400 hover:text-white"
             onClick={() => handleClose(n.id)}
+            aria-label="Dismiss"
           >
             <X size={18} />
           </button>
 
-          {/* Content */}
-          <h2 className="text-lg font-semibold">{isLobbyInvite ? 'Playground Invitation' : 'Friend Request'}</h2>
-          <p className="text-gray-300">{isLobbyInvite ? `${n.email} invited you to a playground` : `${n.email}`}</p>
+          <h2 className="text-lg font-semibold">
+            {n.type === "lobby" ? "Playground Invitation" : "Friend Request"}
+          </h2>
+
+          <p className="text-gray-300 break-words">
+            {n.type === "lobby"
+              ? `${n.from} invited you to "${n.title}"`
+              : `${n.email} wants to be your friend`}
+          </p>
+
+          {n.error && <p className="mt-2 text-sm text-red-400">{n.error}</p>}
 
           <div className="flex gap-x-2 mt-3">
-            <button onClick={() => {handleDeny(n.email); handleClose(n.id)}} className="bg-slate-200 text-black px-3 py-1 rounded">
-              Cancel
+            <button
+              onClick={() => handleDeny(n)}
+              disabled={n.busy}
+              className="bg-slate-200 text-black px-3 py-1 rounded disabled:opacity-50"
+            >
+              Deny
             </button>
-            <button onClick={()=> {handleAccept(n.email); handleClose(n.id)}} className="bg-green-600 px-3 py-1 rounded">Accept</button>
+
+            <button
+              onClick={() => handleAccept(n)}
+              disabled={n.busy}
+              className="bg-green-600 px-3 py-1 rounded disabled:opacity-50"
+            >
+              {n.busy ? (n.type === "friend" ? "Adding..." : "Joining...") : "Accept"}
+            </button>
           </div>
 
-          {/* Progress Bar */}
+          {/* 30-second decreasing progress bar */}
           <div className="w-full h-1 bg-gray-700 mt-3 rounded overflow-hidden">
             <div
-              className="h-1 bg-green-500 transition-all duration-100 linear"
-              style={{ width: `${progressMap[n.id] || 0}%` }}
+              className="h-full bg-green-500 rounded"
+              style={{
+                width: n.running ? "0%" : "100%",
+                transition: n.running ? `width ${DURATION}ms linear` : "none",
+              }}
             />
           </div>
         </div>
@@ -284,4 +295,3 @@ export default function AcceptInvite() {
     </div>
   );
 }
-

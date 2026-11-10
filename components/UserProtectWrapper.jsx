@@ -21,10 +21,10 @@ const UserProtectWrapper = ({
                   setIsLoading(false);
               }
               else{
-                router.push('/Login');
+                router.push('/login');
               }
             }catch(error){
-              router.push('/Login');
+              router.push('/login');
               console.log(error);
             }
          }

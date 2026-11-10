@@ -91,6 +91,16 @@ const userSchema = new mongoose.Schema({
             ref: "Problem",
         },
     ],
+    solvedHistory: {
+        type: [
+            {
+                problem: { type: mongoose.Schema.Types.ObjectId, ref: "Problem", required: true },
+                solvedAt: { type: Date, default: Date.now },   // पहली बार solve होने की date
+                _id: false,
+            },
+        ],
+        default: [],
+    },
     easyproblemssolved:{
         type: Number,
         default: 0

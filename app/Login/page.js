@@ -124,7 +124,7 @@ const Login = () => {
 
         <p className="text-center mt-6 text-[#8f8f99] pb-4">
           Don&apos;t have an account?{' '}
-          <a href={redirectPath ? `/Signup?redirect=${encodeURIComponent(redirectPath)}` : '/Signup'} className="text-blue-600 hover:text-blue-700 hover:underline font-medium">
+          <a href={redirectPath ? `/signup?redirect=${encodeURIComponent(redirectPath)}` : '/signup'} className="text-blue-600 hover:text-blue-700 hover:underline font-medium">
             Sign up
           </a>
         </p>

@@ -1,26 +1,29 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const connectDB = require('../lib/mongoose');
 const userModel = require('../models/user.model');
-const Playground = require('../models/playground')
-require("dotenv").config({ path: "../.env.local" });
+const Playground = require('../models/playground');
+const mongoose = require("mongoose");
 const cors = require("cors");
+require("dotenv").config({ path: "../.env.local" });
+
+const INTERNAL_SECRET = process.env.SOCKET_INTERNAL_SECRET;
+const COOKIE_NAME = process.env.AUTH_COOKIE_NAME || "token";
+
+if (!INTERNAL_SECRET) throw new Error("SOCKET_INTERNAL_SECRET is required");
+if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is required");
+
 const app = express();
-
-
 const server = http.createServer(app);
+
+
 app.use((req, res, next) => {
   console.log("Incoming Origin Header:", req.headers.origin);
   next();
 });
-
-const corsOptions = {
-  origin: "*", // OR use a whitelist array
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: false
-};
-console.log("CORS options used:", corsOptions);
 
 app.use(cors({
   origin: "*",
@@ -30,7 +33,6 @@ app.use(cors({
 
 // Socket.IO CORS
 const io = new Server(server, {
-
   cors: {
     origin: "*", 
     methods: ["GET", "POST"]
@@ -41,17 +43,97 @@ const io = new Server(server, {
   }
 });
 
-  const onlineUsers = new Map();
+/* ------------------------------ auth helpers ------------------------------ */
+
+const safeEqual = (a, b) => {
+  const x = Buffer.from(String(a ?? ""));
+  const y = Buffer.from(String(b ?? ""));
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+};
+ 
+function tokenFromCookie(header = "") {
+  const part = header
+    .split(";")
+    .map((s) => s.trim())
+    .find((s) => s.startsWith(`${COOKIE_NAME}=`));
+  return part ? decodeURIComponent(part.slice(COOKIE_NAME.length + 1)) : null;
+}
+
+// Returns the verified user id from the login cookie / auth token, or null.
+function authUserId(socket) {
+  const token = socket.handshake.auth?.token || tokenFromCookie(socket.handshake.headers.cookie);
+  if (!token || !process.env.JWT_SECRET) return null;
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const id = payload._id || payload.id || payload.userId || payload.sub;
+    return mongoose.isValidObjectId(id) ? String(id) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Soft auth: we never reject a connection, so friend requests and online users keep
+// working exactly as before. Only the lobby features below need a verified user.
+io.use((socket, next) => {
+  socket.data.userId = authUserId(socket);
+  next();
+});
+
+/* ----------------- Next.js -> socket: "emit this event to these rooms" ----------------- */
+
+
+app.post("/internal/emit", express.json({ limit: "64kb" }), (req, res) => {
+  if (!INTERNAL_SECRET) return res.status(503).end();
+  if (!safeEqual(req.headers["x-internal-secret"], INTERNAL_SECRET)) return res.status(401).end();
+ 
+  const { room, rooms, event, payload } = req.body ?? {};
+  const targets = (Array.isArray(rooms) ? rooms : [room]).filter((r) => typeof r === "string" && r);
+  if (!targets.length || typeof event !== "string") return res.status(400).end();
+ 
+  // chaining .to() sends the event once even if a socket is in several of the rooms
+  let op = io.to(targets[0]);
+  for (const target of targets.slice(1)) op = op.to(target);
+  op.emit(event, payload ?? {});
+  res.status(204).end();
+});
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const clean = (v) => String(v || '').trim().toLowerCase();
+
+/* ---------------------------------- sockets ---------------------------------- */
+
+const onlineUsers = new Map(); // userId -> Set of socket ids
+ 
+// Next.js asks: "which of these users are online?" (used to allow invites only to online friends)
+
+app.post("/internal/online", express.json({ limit: "64kb" }), (req, res) => {
+  if (!INTERNAL_SECRET) return res.status(503).end();
+  if (!safeEqual(req.headers["x-internal-secret"], INTERNAL_SECRET)) return res.status(401).end();
+  const ids = Array.isArray(req.body?.userIds) ? req.body.userIds.map(String) : [];
+  res.json({ online: ids.filter((id) => onlineUsers.has(id)) });
+});
+
 
 io.on('connection', async (socket) => {
-  console.log('A user connected:', socket.id);
+  const { userId } = socket.data;
+  console.log('A user connected:', userId, socket.id);
 
+  // personal room for lobby invites (all tabs of this user)
+  if (socket.data.userId) socket.join(`user:${socket.data.userId}`);
 
-    // When user connects, store their ID and socketId
+  // When user connects, store their ID and socketId
   socket.on("user_connected", ({userId}) => {
     console.log("user id : ", userId);
-    onlineUsers.set(userId, socket.id);
-    io.emit("online_users", Array.from(onlineUsers.keys())); // optional broadcast
+    const sockets = onlineUsers.get(userId) ?? new Set();
+    sockets.add(socket.id);
+    onlineUsers.set(userId, sockets);
+
+    if (!socket.data.userId && mongoose.isValidObjectId(userId)) {
+      socket.data.userId = String(userId);
+      socket.join(`user:${userId}`);
+    }
+
+  io.emit("online_users", Array.from(onlineUsers.keys())); // optional broadcast
   });
 
   // Register or update user socket ID
@@ -64,7 +146,6 @@ io.on('connection', async (socket) => {
         { email },
         {
           socketId: socket.id,
-          // lastActive: new Date()
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
@@ -75,163 +156,89 @@ io.on('connection', async (socket) => {
     }
   });
 
-  // Create lobby handler
-  socket.on('create-lobby', async ({ email, settings }, callback) => {
-    console.log('Create lobby request received from:', email, settings);
+  socket.on("playground:unsubscribe", ({ id } = {}) => {
+    if (typeof id === "string") socket.leave(`pg:${id}`);
+  });
 
+  socket.on('add-friend', async (payload, ack) => {
+    console.log('add-friend event received:', payload);
+    const reply = typeof ack === 'function' ? ack : () => {};
     try {
-      if (!email) {
-        throw new Error('Email is required');
+      const data = payload?.data || {};
+     
+      const from = clean(socket.data?.user?.email || data.email);
+      const to = clean(data.friendemail);
+ 
+      if (!EMAIL_RE.test(to)) return reply({ ok: false, message: 'Enter a valid email address.' });
+      if (from === to) return reply({ ok: false, message: "You can't add yourself." });
+ 
+      const [me, target] = await Promise.all([
+        userModel.findOne({ email: from, accountStatus: 'active' }),
+        userModel.findOne({ email: to, accountStatus: 'active' }),
+      ]);
+      if (!me) return reply({ ok: false, message: 'Please sign in again.' });
+      if (!target) return reply({ ok: false, message: 'No player found with this email.' });
+      if (me.friends.some((f) => f.equals(target._id))) {
+        return reply({ ok: false, message: `You are already friends with ${target.username}.` });
       }
-
-      const lobbyId = generateLobbyId();
-      console.log('Generating new lobby ID:', lobbyId);
-
-      const newLobby = new Playground({
-        id: lobbyId,
-        members: [{ name: email, totalPoints: 0 }],
-        owner: email,
-        sessionend: settings.timeLimit,
-        status: 'waiting'
-      });
-
-      const savedLobby = await newLobby.save();
-      console.log('Lobby saved to DB:', savedLobby);
-
-      socket.join(lobbyId);
-      console.log('Socket joined lobby room:', lobbyId);
-
-      // Important: Verify callback exists before calling it
-      if (typeof callback === 'function') {
-        callback({ success: true, lobbyId });
-      } else {
-        console.error('No callback function provided by client');
+ 
+      if (me.notifications.some((n) => n.senderEmail === to && n.status === 'pending')) {
+        await Promise.all([
+          userModel.updateOne({ _id: me._id }, { $addToSet: { friends: target._id }, $pull: { notifications: { senderEmail: to } } }),
+          userModel.updateOne({ _id: target._id }, { $addToSet: { friends: me._id }, $pull: { notifications: { senderEmail: from } } }),
+        ]);
+        if (target.socketId) io.to(target.socketId).emit('friend-list-changed');
+        return reply({ ok: true, accepted: true, message: `You and ${target.username} are now friends.` });
       }
+ 
+      const res = await userModel.updateOne(
+        { _id: target._id, 'notifications.senderEmail': { $ne: from } },
+        { $push: { notifications: { senderEmail: from, receiverEmail: to, status: 'pending', createdAt: new Date() } } }
+      );
+      if (res.modifiedCount === 0) {
+        return reply({ ok: false, message: 'You already sent a request to this player.' });
+      }
+ 
+      if (target.socketId) io.to(target.socketId).emit('addFriendRequestReceived', from);
+      return reply({ ok: true, message: `Request sent to ${target.username}.` });
     } catch (err) {
-      console.error('Error creating lobby:', err);
-      if (typeof callback === 'function') {
-        callback({ success: false, error: err.message });
-      }
+      console.error('add-friend failed', err);
+      return reply({ ok: false, message: 'Something went wrong. Please try again.' });
+    }
+  });
+ 
+  socket.on('friend-accepted-notify', async (payload) => {
+    try {
+      const sender = await userModel.findOne({ email: clean(payload?.senderEmail) }).select('socketId');
+      if (sender?.socketId) io.to(sender.socketId).emit('friend-list-changed');
+    } catch (err) {
+      console.error('friend-accepted-notify failed', err);
     }
   });
 
- socket.on('add-friend', async({data}) => {
-   const {email, friendemail} = data;
-   console.log(email, friendemail);
-      
-      const friend = await userModel.findOne({email: friendemail});
-      
-          if(!friend)
-          {
-              return new Response(
-                  JSON.stringify({ message: "Friend not found"}),
-                  { status: 400 }
-                );
-          }
-  
-          const notification = {
-              senderEmail:email,
-              receiverEmail: friendemail,
-              status: "panding",
-              createdAt: new Date()
-          }
-          let isSend = true;
-          if(friend.friends.includes(email)){
-            isSend = false;
-          }
-          if(isSend){
-            friend.notifications.map((n)=> n.senderEmail == email && n.receiverEmail == friendemail ? isSend = false : '');
-          }
-          if(isSend){
-            friend.notifications.push(notification);
-            await friend.save();
-            io.to(friend.socketId).emit("addFriendRequestReceived", email);
-          }
- })
 
-  // Invite handler
-  socket.on('send-invite', async ({ lobbyId, friendSocketId, inviterEmail }) => {
-    console.log("invite received");
+  socket.on("playground:subscribe", async ({ id } = {}, ack) => {
     try {
-      // const friend = await UserSocket.findOne({ email: friendEmail });
-      console.log("Attempting to emit to socket ID:", friendSocketId);
-      const targetSocket = io.sockets.sockets.get(friendSocketId);
-      console.log("Target socket:", targetSocket ? "Found" : "Not found");
-      if (targetSocket) {
-        io.to(friendSocketId).emit('receive-invite', {
-          lobbyId,
-          inviterEmail,
-          timestamp: new Date()
-        });
-      } else {
-        console.log("Socket with ID", friendSocketId, "not currently connected.");
-      }
-      // if (friendSocketId) {
-      //   console.log("friendSocketid",friendSocketId);
-      //   io.to(friendSocketId).emit('receive-invite', {
-      //     lobbyId,
-      //     inviterEmail,
-      //     timestamp: new Date()
-      //   });
-      // }
+      const userId = socket.data.userId;
+      if (!userId || !mongoose.isValidObjectId(id)) return ack?.({ ok: false });
+ 
+      await connectDB();
+      const allowed = await Playground.exists({
+        _id: id,
+        members: { $elemMatch: { user: userId, status: { $in: ["invited", "joined"] } } },
+      });
+      if (!allowed) return ack?.({ ok: false });
+ 
+      socket.join(`pg:${id}`);
+      ack?.({ ok: true });
     } catch (err) {
-      console.error('Invite error:', err);
+      console.error("playground:subscribe failed:", err);
+      ack?.({ ok: false });
     }
   });
 
-  // Accept invite handler
-  socket.on('accept-invite', async ({ lobbyId, id }, callback) => {
-    try {
-      const lobby = await Playground.findById(lobbyId);
-      if (!lobby) return callback({ success: false, error: 'Lobby not found' });
-
-      const data = {
-        member: id,
-        totalPoints: 0
-      }
-      lobby.members.push(data);
-      await lobby.save();
-      const lby = await Playground.findById(lobbyId).populate({
-        path: 'members.member',
-        select: 'username email'
-      });
-
-      socket.join(lobbyId);
-      io.to(lobbyId).emit('lobby-updated', lby);
-      callback({ success: true, lobbyId });
-    } catch (err) {
-      callback({ success: false, error: err.message });
-    }
-  });
-
-  // Fetch Lobby
-  socket.on('fetch-lobby', async({lobbyId}) => {
-    const lobby = await Playground.findById(lobbyId).populate({
-        path: 'members.member',
-        select: 'username email'
-      });
-      io.to(lobbyId).emit('lobby-updated', lobby);
-  })
-
-
-// Rejoin lobby
-  socket.on('rejoin-lobby', ({lobbyId}) =>{
-    console.log("rejoin", lobbyId);
-    socket.join(lobbyId);
-  })
-
-  // Start lobby handler (host only)
-  socket.on('start-lobby', async ({ lobbyId, email }) => {
-    console.log("Starting Lobby..................");
-    await Playground.findByIdAndUpdate(lobbyId, { $set: { status: 'active', startedAt: new Date() } });
-    console.log("updated lobby status");
-    const lobby = await Playground.findById(lobbyId);
-    console.log("lobby found", lobby);
-    if (lobby && lobby.owner === email) {
-      io.to(lobbyId).emit('lobby-started', {
-        redirectTo: `/problems/${lobbyId}`,
-      });
-    }
+  socket.on("playground:unsubscribe", ({ id } = {}) => {
+    if (typeof id === "string") socket.leave(`pg:${id}`);
   });
 
   socket.on('fetchOnline_users', ()=> {
@@ -240,9 +247,9 @@ io.on('connection', async (socket) => {
 
   socket.on('disconnect', async () => {
     console.log('A user disconnected:', socket.id);
-      for (const [userId, id] of onlineUsers.entries()) {
-      if (id === socket.id) {
-        onlineUsers.delete(userId);
+      for (const [userId, sockets] of onlineUsers.entries()) {
+      if (sockets.delete(socket.id)) {
+        if (sockets.size === 0) onlineUsers.delete(userId); // last tab closed -> offline
         break;
       }
     }
@@ -250,10 +257,6 @@ io.on('connection', async (socket) => {
   });
 
 });
-
-function generateLobbyId() {
-  return Math.random().toString(36).substr(2, 6).toUpperCase();
-}
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {

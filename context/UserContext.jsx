@@ -5,7 +5,6 @@ import axios from 'axios';
 import { useSession } from "next-auth/react";
 export const UserDataContext = createContext();
 
-
 const UserContext = ({children}) => {
 
     const [user, setUser] = useState(null);

@@ -84,7 +84,7 @@ const Signup = () => {
           setemail('');
           setPassword('');
           setConfirmPassword('');
-          router.push(redirectPath ? `/Login?redirect=${encodeURIComponent(redirectPath)}` : '/Login');
+          router.push(redirectPath ? `/login?redirect=${encodeURIComponent(redirectPath)}` : '/login');
         }
       }catch(error){
         setMessage(error.response.data.message);
@@ -488,7 +488,7 @@ const Signup = () => {
 
         <p className="text-center mt-2 text-[#8f8f99] pb-2">
           Already have an account?{' '}
-          <a href={redirectPath ? `/Login?redirect=${encodeURIComponent(redirectPath)}` : '/Login'} className="text-blue-600 hover:text-blue-700 hover:underline font-medium">
+          <a href={redirectPath ? `/login?redirect=${encodeURIComponent(redirectPath)}` : '/login'} className="text-blue-600 hover:text-blue-700 hover:underline font-medium">
             Sign in
           </a>
         </p>

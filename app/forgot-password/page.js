@@ -501,7 +501,7 @@ export default function ForgotPassword() {
 
         {step === "done" && (
           <Link
-            href={redirectPath ? `/Login?redirect=${encodeURIComponent(redirectPath)}` : '/Login'}
+            href={redirectPath ? `/login?redirect=${encodeURIComponent(redirectPath)}` : '/login'}
             className="mt-7 mb-6 block w-full rounded-lg bg-white py-2 text-center font-semibold text-black hover:bg-white/90"
           >
             Back to Login
@@ -510,7 +510,7 @@ export default function ForgotPassword() {
 
         {step !== "done" && (
           <Link
-            href={redirectPath ? `/Login?redirect=${encodeURIComponent(redirectPath)}` : '/Login'}
+            href={redirectPath ? `/login?redirect=${encodeURIComponent(redirectPath)}` : '/login'}
             className="mt-6 mb-6 flex items-center justify-center gap-2 pb-5 text-sm text-[#8f8f99] hover:text-white"
           >
             <ArrowLeft size={16} />

@@ -176,9 +176,6 @@ function ProblemsContent() {
     return params.toString();
   }, [q, topic, difficulty, page, user?._id]);
 
-  console.log("sovled ids: ", solvedIds);
-  console.log("user : ", user);
-
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -359,7 +356,7 @@ function ProblemsContent() {
               return (
                 <li key={problem._id}>
                   <Link
-                    href={`/CodeEditor/${problem.slug}`}
+                    href={`/code-editor/${problem.slug}`}
                     className="group flex w-full items-center gap-4 rounded-lg bg-[#0a0a0a] px-4 py-3 font-medium text-white transition duration-200 hover:bg-gray-100 hover:text-black focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                   >
                     <StatusCircle solved={solved} />

@@ -1,10 +1,11 @@
 import { isDeepStrictEqual } from "node:util";
-import mongoose from "mongoose";
 import connectDB from "@/lib/mongoose";
 import Problem from "@/models/problems";
 import Submission from "@/models/submission";
+import User from "@/models/user.model";
 import { authUser } from "@/app/middlewares/auth.middleware";
 import { recordFirstSolve } from "@/lib/progress";
+import { findLobbyForSubmission, applyLobbyScore } from "@/lib/playground";
 
 export const maxDuration = 60;
 
@@ -89,7 +90,9 @@ function outputsMatch(actual, expected, mode) {
   if (mode === "json") {
     try {
       const parsedActual = JSON.parse(actual);
+      // expectedOutput is stored as a real value (9, "olleh", [1,2]), so compare directly
       if (isDeepStrictEqual(parsedActual, expected)) return true;
+      // also accept expected stored as JSON text, e.g. '"olleh"' or '[1,2]'
       if (typeof expected === "string") {
         try {
           if (isDeepStrictEqual(parsedActual, JSON.parse(expected))) return true;
@@ -97,7 +100,7 @@ function outputsMatch(actual, expected, mode) {
       }
     } catch {
       // output isn't JSON (e.g. Java/C++ print raw text) – fall through
-    } 
+    }
   }
 
   return cleanLines(actual) === cleanLines(expectedStr);
@@ -146,7 +149,7 @@ async function runBatch(payloads) {
     if (ordered.every((s) => s && (s.status?.id ?? s.status_id) > 2)) return ordered;
     await sleep(POLL_INTERVAL_MS);
   }
-  throw new Error("Judge0 timed out");
+  throw new JudgeError("Judge0 timed out");
 }
 
 /* -------------------------------- verdicts -------------------------------- */
@@ -192,7 +195,6 @@ function evaluate(sub, testCase, limits, comparison) {
 /* ---------------------------------- route ---------------------------------- */
 
 export async function POST(req, { params }) {
-
   try {
     const { slug } = await params;
     const body = await req.json().catch(() => ({}));
@@ -203,9 +205,8 @@ export async function POST(req, { params }) {
     if (typeof code !== "string" || !code.trim()) return json({ message: "Code is empty" }, 400);
     if (code.length > MAX_CODE_LENGTH) return json({ message: "Code is too long" }, 413);
 
-    // TODO (production): require an authenticated user for mode === "submit"
-    // and rate-limit this route; it executes arbitrary code on your Judge0.
-
+    // Submitting needs a logged-in user. (Run stays open for now – add auth /
+    // rate-limiting here too before going to production.)
     let userId = null;
     if (mode === "submit") {
          const { user, error } = await authUser(req);
@@ -221,6 +222,11 @@ export async function POST(req, { params }) {
       visibility: "published",
     }).lean();
     if (!problem) return json({ message: "Problem not found" }, 404);
+
+    if (mode === "submit") {
+      const account = await User.findOne({ _id: userId, accountStatus: "active" }).select("_id").lean();
+      if (!account) return json({ message: "Your account can't submit right now." }, 403);
+    }
 
     // ---- server-side test case selection (never trust the client) ----
     const all = (problem.testCases ?? []).map((tc, index) => ({ tc, index }));
@@ -303,7 +309,9 @@ export async function POST(req, { params }) {
       });
     }
 
-    // submit: reveal details only when the failing case is public.
+    /* ----------------------------- submit mode ----------------------------- */
+
+    // reveal details only when the failing case is public.
     const failedCase = firstFailure
       ? {
           number: firstFailure.index + 1,
@@ -319,66 +327,100 @@ export async function POST(req, { params }) {
               }),
         }
       : null;
-      const accepted = summary.verdict === "Accepted";
 
-      // stderr of a hidden case could hint at its data, so only keep it for
-      // compile errors and public cases.
-      const errorMessage = !firstFailure
-        ? null
-        : firstFailure.verdict === "Compilation Error"
-        ? firstFailure.message
-        : firstFailure.hidden
-        ? null
-        : firstFailure.message ?? null;
+    const accepted = summary.verdict === "Accepted";
 
-        const submission = await Submission.create({
-        user: userId,
-        problem: problem._id,
-        playground: mongoose.isValidObjectId(body.lobby) ? body.lobby : null,
-        code,
-        language,
-        status: STATUS_BY_VERDICT[summary.verdict] ?? "internal_error",
-        execution: {
-          timeMs: summary.timeMs,
-          memoryKb: summary.memoryKb,
-          passedTests: summary.passed,
-          totalTests: summary.total,
+    // stderr of a hidden case could hint at its data, so only keep it for
+    // compile errors and public cases.
+    const errorMessage = !firstFailure
+      ? null
+      : firstFailure.verdict === "Compilation Error"
+      ? firstFailure.message
+      : firstFailure.hidden
+      ? null
+      : firstFailure.message ?? null;
+
+
+    if(accepted){
+      await User.updateOne(
+        {
+          _id: userId,
+          solvedProblems: { $ne: problem._id },
+          'solvedHistory.problem': { $ne: problem._id },
         },
-        failedCase: failedCase
-          ? {
-              number: failedCase.number,
-              hidden: failedCase.hidden,
-              verdict: failedCase.verdict,
-              inputs: failedCase.inputs,
-              expected: failedCase.expected,
-              actual: failedCase.actual,
-            }
-          : null,
-        scoreAwarded: evals.filter((e) => e.verdict === "Accepted").reduce((sum, e) => sum + (e.tc.points ?? 1), 0),
-        errorMessage,
-        submittedAt: startedAt,
-        judgedAt: new Date(),
-      });
+        {
+          $push: { solvedHistory: { problem: problem._id, solvedAt: new Date() } },
+        }
+      );
+    }
 
-          // Bookkeeping must never hide a finished judgement from the user.
-      let progress = null;
-      try {
-        await Problem.updateOne(
-          { _id: problem._id },
-          { $inc: { "stats.submissionCount": 1, "stats.acceptedCount": accepted ? 1 : 0 } }
-        );
-        if (accepted) progress = await recordFirstSolve({ userId, problem });
-      } catch (error) {
-        console.error("Progress update failed:", error);
-      }
-      return json({
-        ...summary,
-        failedCase,
-        submissionId: String(submission._id),
-        submittedAt: submission.submittedAt,
-        firstSolve: progress?.firstSolve ?? false,
-        streak: progress?.streak ?? null,
-      });
+    // Only attach the submission to a lobby the user really plays in (never trust body.lobby).
+    const lobbyDoc = await findLobbyForSubmission({ lobbyId: body.lobby, userId, problemId: problem._id });
+
+
+    // a lobby that has ended takes no more submissions
+    if (body.lobby && lobbyDoc && (lobbyDoc.status !== "active" || new Date(lobbyDoc.endsAt) <= new Date())) {
+      return json({ message: "This party has ended. Go back to the party to see the results." }, 409);
+    }
+
+    const submission = await Submission.create({
+      user: userId,
+      problem: problem._id,
+      playground: lobbyDoc?._id ?? null,
+      code,
+      language,
+      status: STATUS_BY_VERDICT[summary.verdict] ?? "internal_error",
+      execution: {
+        timeMs: summary.timeMs,
+        memoryKb: summary.memoryKb,
+        passedTests: summary.passed,
+        totalTests: summary.total,
+      },
+      failedCase: failedCase
+        ? {
+            number: failedCase.number,
+            hidden: failedCase.hidden,
+            verdict: failedCase.verdict,
+            inputs: failedCase.inputs,
+            expected: failedCase.expected,
+            actual: failedCase.actual,
+          }
+        : null,
+      scoreAwarded: evals.filter((e) => e.verdict === "Accepted").reduce((sum, e) => sum + (e.tc.points ?? 1), 0),
+      errorMessage,
+      submittedAt: startedAt,
+      judgedAt: new Date(),
+    });
+
+    // Bookkeeping must never hide a finished judgement from the user.
+    let progress = null;
+    try {
+      await Problem.updateOne(
+        { _id: problem._id },
+        { $inc: { "stats.submissionCount": 1, "stats.acceptedCount": accepted ? 1 : 0 } }
+      );
+      if (accepted) progress = await recordFirstSolve({ userId, problem });
+    } catch (error) {
+      console.error("Progress update failed:", error);
+    }
+
+    // Multiplayer scoring (counted once per player per problem, only while the game is running).
+    let lobby = null;
+    try {
+      lobby = await applyLobbyScore({ lobby: lobbyDoc, userId, problem, submission, accepted });
+    } catch (error) {
+      console.error("Lobby score failed:", error);
+    }
+
+    return json({
+      ...summary,
+      failedCase,
+      lobby,
+      submissionId: String(submission._id),
+      submittedAt: submission.submittedAt,
+      firstSolve: progress?.firstSolve ?? false,
+      streak: progress?.streak ?? null,
+    });
   } catch (error) {
     console.error("Judge error:", error);
     if (error instanceof JudgeError) return json({ message: error.message }, 502);
