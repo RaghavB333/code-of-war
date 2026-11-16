@@ -3,9 +3,9 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import Link from "next/link";
-import Image from "next/image";
 import { Mail, ArrowLeft} from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import Logo from "@/lib/Logo";
 
 
   const boxs = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,,1,1,1,
@@ -249,20 +249,15 @@ export default function ForgotPassword() {
   return (
     <main className='max-h-screen relative flex flex-wrap gap-4 overflow-hidden'>
         {boxs.map((box,index)=> (
-          <div key={index} className='w-9 h-9 rounded-lg border border-blue-400'></div>
+          <div key={index} className='w-9 h-9 rounded-lg border border-blue-300'></div>
         ))}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.7)_40%,black_90%)] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.7)_60%,black_90%)] pointer-events-none"></div>
 
       <section className="min-h-screen absolute w-full bg-[#0a0a0ab3] flex items-center justify-center px-4">
         <div className="bg-[#09090b] rounded-2xl shadow-[0_0_60px_20px_rgba(0,0,0,0.8)] w-full px-8 max-w-[420px] border border-white/10">
-        <Image
-          src="/cow1.png"
-          alt="Code of War"
-          width={220}
-          height={100}
-          className="mx-auto"
-          priority
-        />
+          <div className='py-6 flex justify-center items-center'>
+            <Logo/>
+          </div>
 
         <div className="mt-5 text-center">
 

@@ -1,13 +1,13 @@
 "use client"
 import React from 'react'
 import { useState, useEffect, useRef } from 'react'
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { User, Mail, Lock } from 'lucide-react';
 import { useSearchParams } from "next/navigation";
 import { signIn} from "next-auth/react";
 import { FcGoogle } from "react-icons/fc";
 import axios from 'axios';
+import Logo from '@/lib/Logo';
 const Signup = () => {
     const [username, setUsername] = useState('');
     const [email, setemail] = useState('');
@@ -273,13 +273,24 @@ const Signup = () => {
     return (
       <div className='max-h-screen relative flex flex-wrap gap-4 overflow-hidden'>
         {boxs.map((box,index)=> (
-          <div key={index} className='w-9 h-9 rounded-lg border border-blue-400'></div>
+          <div key={index} className='w-9 h-9 rounded-lg border border-blue-300'></div>
         ))}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.7)_40%,black_90%)] pointer-events-none"></div>
-      <div className="min-h-screen absolute w-full bg-[#0a0a0ab3] flex items-center justify-center mx-4">
-      <div className="bg-[#09090b] rounded-2xl border border-white/10 shadow-xl px-8 py-3 w-full max-w-[450px]">
-        <div>
-          <Image src='/cow1.png' alt='logo' width={220} height={100} className='mx-auto'></Image>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.7)_60%,black_90%)] pointer-events-none"></div>
+      {/* <div
+        className="pointer-events-none absolute -inset-[2000px] opacity-25"
+        style={{
+          backgroundImage: `
+            radial-gradient(rgba(59, 130, 246, 0.50) 1.5px, transparent 1.5px),
+            linear-gradient(to right, rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.09) 1px, transparent 1px)
+          `,
+          backgroundSize: "40px 40px, 80px 80px, 80px 80px",
+        }}
+      /> */}
+      <div className="min-h-screen absolute w-full bg-[#0a0a0ab3] flex items-center justify-center">
+      <div className="bg-[#09090b] rounded-2xl border border-white/10 shadow-xl px-8 py-3 w-full max-w-[450px] mx-4">
+        <div className='py-6 flex justify-center items-center'>
+          <Logo/>
         </div>
 
         <form className="space-y-4">

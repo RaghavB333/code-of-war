@@ -12,6 +12,8 @@ import {
 import {
   Mail, User, Bell, UserPlus, Users, Flame, Trophy, Target, Crown, Check, X, Swords,
 } from 'lucide-react';
+import HexLoader from "@/components/HexLoader";
+import AccessModal from "@/components/AccessModal";
 
 const COLORS = { easy: '#22c55e', medium: '#eab308', hard: '#ef4444' };
 
@@ -137,7 +139,6 @@ const Dashboard = () => {
   const [busyEmail, setBusyEmail] = useState(null);
 
   const { user } = useContext(UserDataContext);
-  console.log("frontend user : ", user);
   const { socket } = useContext(LobbyDataContext);
   const userId = user?._id;
   const email = user?.email;
@@ -231,7 +232,7 @@ const Dashboard = () => {
       setNotifications((prev) => prev.filter((n) => n.senderEmail !== senderEmail));
     } catch (err) {
       console.error(errorMessage(err, 'Could not accept request'), err);
-      fetchNotifications(); // stale होने पर list ठीक कर दो
+      fetchNotifications();
     } finally {
       setBusyEmail(null);
     }

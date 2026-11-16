@@ -165,18 +165,159 @@ export async function POST(request) {
       await transporter.sendMail({
         from: `"Code of War" <${process.env.SMTP_USER}>`,
         to: email,
+
         subject: isSignup
-          ? "Verify your Code of War email"
+          ? "Verify your Code of War account"
           : "Reset your Code of War password",
-        text: `Your OTP is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes. If you did not request this code, you can ignore this email.`,
+
+        text: `Your Code of War verification code is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes. If you did not request this code, please ignore this email.`,
+
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto;">
-            <h2>${isSignup ? "Verify your email" : "Reset your password"}</h2>
-            <p>Your Code of War verification code is:</p>
-            <h1 style="letter-spacing: 8px;">${otp}</h1>
-            <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
-            <p>If you did not request this code, you can ignore this email.</p>
-          </div>
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            </head>
+
+            <body style="margin:0; padding:0; background-color:#000000; font-family:Arial,Helvetica,sans-serif;">
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                style="background-color:#000000; padding:40px 15px;">
+
+                <tr>
+                  <td align="center">
+
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                      style="max-width:520px; background-color:#000000; border:1px solid #252525; border-radius:14px; overflow:hidden;">
+
+                      <!-- Top Accent -->
+                      <tr>
+                        <td style="height:3px; background-color:#3b82f6;"></td>
+                      </tr>
+
+                      <!-- Header -->
+                      <tr>
+                        <td align="center" style="padding:38px 25px 20px;">
+
+                          <p style="margin:0; color:#60a5fa; font-size:12px; font-weight:bold; letter-spacing:4px;">
+                            CODE OF WAR
+                          </p>
+
+                          <h1 style="margin:28px 0 12px; color:#ffffff; font-size:25px; font-weight:700;">
+                            ${isSignup ? "Verify Your Email" : "Reset Your Password"}
+                          </h1>
+
+                          <p style="margin:0; color:#9ca3af; font-size:14px; line-height:24px;">
+                            ${
+                              isSignup
+                                ? "One last step to enter the arena. Verify your email address using the code below."
+                                : "We received a request to reset your password. Use the verification code below to continue."
+                            }
+                          </p>
+
+                        </td>
+                      </tr>
+
+                      <!-- OTP Section -->
+                      <tr>
+                        <td align="center" style="padding:25px 15px 30px;">
+
+                          <p style="margin:0 0 20px; color:#cbd5e1; font-size:12px; letter-spacing:2px; text-transform:uppercase;">
+                            Your Verification Code
+                          </p>
+
+                          <table cellpadding="0" cellspacing="7" border="0" align="center">
+                            <tr>
+                              ${String(otp)
+                                .split("")
+                                .map(
+                                  (digit) => `
+                                    <td align="center" valign="middle"
+                                      style="
+                                        width:42px;
+                                        height:52px;
+                                        background-color:#080808;
+                                        border:1px solid #2563eb;
+                                        border-radius:8px;
+                                        color:#60a5fa;
+                                        font-size:25px;
+                                        font-weight:bold;
+                                      ">
+                                      ${digit}
+                                    </td>
+                                  `
+                                )
+                                .join("")}
+                            </tr>
+                          </table>
+
+                          <p style="margin:22px 0 0; color:#9ca3af; font-size:13px;">
+                            This code expires in
+                            <strong style="color:#60a5fa;">
+                              ${OTP_EXPIRY_MINUTES} minutes
+                            </strong>.
+                          </p>
+
+                        </td>
+                      </tr>
+
+                      <!-- Security Notice -->
+                      <tr>
+                        <td style="padding:0 30px 30px;">
+
+                          <table width="100%" cellpadding="0" cellspacing="0"
+                            style="background-color:#080808; border:1px solid #252525; border-radius:8px;">
+
+                            <tr>
+                              <td style="padding:15px 16px;">
+
+                                <p style="margin:0 0 6px; color:#60a5fa; font-size:12px; font-weight:bold; letter-spacing:1px;">
+                                  SECURITY NOTICE
+                                </p>
+
+                                <p style="margin:0; color:#9ca3af; font-size:12px; line-height:20px;">
+                                  Never share this code with anyone. Code of War will never ask you to disclose your OTP.
+                                  If you didn't request this code, you can safely ignore this email.
+                                </p>
+
+                              </td>
+                            </tr>
+
+                          </table>
+
+                        </td>
+                      </tr>
+
+                      <!-- Footer -->
+                      <tr>
+                        <td align="center"
+                          style="padding:22px 20px; border-top:1px solid #252525;">
+
+                          <p style="margin:0; color:#64748b; font-size:11px; letter-spacing:2px;">
+                            CODE OF WAR
+                          </p>
+
+                          <p style="margin:9px 0 0; color:#475569; font-size:11px;">
+                            Sharpen Your Blades. Write Your Destiny.
+                          </p>
+
+                          <p style="margin:12px 0 0; color:#475569; font-size:10px;">
+                            © ${new Date().getFullYear()} Code of War. All rights reserved.
+                          </p>
+
+                        </td>
+                      </tr>
+
+                    </table>
+
+                  </td>
+                </tr>
+
+              </table>
+
+            </body>
+          </html>
         `,
       });
     } catch (emailError) {

@@ -1,42 +1,52 @@
 "use client"
 import React, { useContext, useEffect, useState } from 'react'
 import { UserDataContext } from '@/context/UserContext'
-import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import AccessModal from './AccessModal';
+import HexLoader from './HexLoader';
 const UserProtectWrapper = ({
   children
 }) => {
-    const router = useRouter();
     const {setUser} = useContext(UserDataContext);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isUnauthorized, setIsUnauthorized] = useState(false);
+    const [showLoader, setShowLoader] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [progress, setProgress] = useState(0);
 
-        useEffect(() => {
-         const getProfile = async() => {
-            try{
-              const response = await axios.get('/api/profile', {withCredentials: true});
-              if(response.status === 200){
-                  const data = response.data;
-                  console.log(data);
-                  setUser(data.user);
-                  setIsLoading(false);
-              }
-              else{
-                router.push('/login');
-              }
-            }catch(error){
-              router.push('/login');
-              console.log(error);
-            }
-         }
-          getProfile();
-      }, []);
-
-    if(isLoading){
-        return <div>Loading...</div>
-    }
+    useEffect(() => {
+      const getProfile = async() => {
+        try{
+          const response = await axios.get('/api/profile', {withCredentials: true});
+          if(response.status === 200){
+              const data = response.data;
+              console.log(data);
+              setUser(data.user);
+              setLoading(false);
+              setShowLoader(false);
+          }
+          else{
+            setIsUnauthorized(true);
+          }
+        }catch(error){
+          setIsUnauthorized(true);
+          setShowLoader(false);
+          console.log(error);
+        }
+      }
+      getProfile();
+  }, []);
+    
   return (
     <div>
-      {children}
+        {showLoader && (
+          <HexLoader
+            isLoading={loading}
+            progress={progress}
+            onFinish={() => setShowLoader(false)}
+          />
+        )}
+        {isUnauthorized ? <AccessModal/> :  children}
+       
     </div>
   )
 }

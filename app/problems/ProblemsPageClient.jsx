@@ -223,7 +223,7 @@ function ProblemsContent() {
   const lastItem = Math.min(page * PAGE_SIZE, data.total);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] p-4 sm:p-6">
+    <div className="min-h-screen bg-[#0a0a0a] p-4 sm:p-6 mt-16">
       <div className="mx-auto w-full max-w-4xl rounded-lg bg-[#0a0a0a] p-4 shadow-md sm:p-6">
         <h1 className="mb-6 text-center text-2xl font-bold text-white sm:text-left sm:text-3xl">
           Available Problems

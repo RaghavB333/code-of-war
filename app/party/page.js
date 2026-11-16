@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { Search, X, Swords, Clock, Zap, Shield, ChevronDown } from 'lucide-react';
-import UserProtectWrapper from '@/components/UserProtectWrapper';
+import { UserDataContext } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import axios from 'axios';
 
@@ -17,6 +17,7 @@ const CreateParty = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [problems, setProblems] = useState([]);
+  const { user } = useContext(UserDataContext);
 
 
   useEffect(() => {
@@ -52,6 +53,9 @@ const CreateParty = () => {
 
   const handleCreateLobby = async () => {
     if (isLoading) return;
+    if(!user?._id){
+      router.push('/login?redirect=party');
+    }
     if (selectionMode === "manual" && selectedQuestions.length === 0) {
       setError("Select at least one question.");
       return;
@@ -72,8 +76,8 @@ const CreateParty = () => {
   };
   
   return (
-    <UserProtectWrapper>
-    <div className="min-h-screen bg-[#0a0a0a] text-gray-100 p-4 md:p-8 relative overflow-hidden">
+    <>
+    <div className="min-h-screen bg-[#0a0a0a] text-gray-100 p-4 md:p-8 relative overflow-hidden mt-16">
       {/* Background effects */}
       <div className="absolute inset-0 bg-[#0a0a0a] pointer-events-none" />
       <div className="absolute top-0 left-0 w-96 h-96 bg-blue-900/10 rounded-full blur-3xl pointer-events-none" />
@@ -336,7 +340,7 @@ const CreateParty = () => {
         }
       `}</style>
     </div>
-    </UserProtectWrapper>
+    </>
   );
 };
 

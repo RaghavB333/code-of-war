@@ -9,7 +9,7 @@ import { signIn} from "next-auth/react";
 import { FcGoogle } from "react-icons/fc";
 import { Mail, Lock } from 'lucide-react';
 import Link from "next/link";
-import Image from 'next/image';
+import Logo from '@/lib/Logo';
 
 const Login = () => {
     const [email, setemail] = useState('');
@@ -60,13 +60,13 @@ const Login = () => {
     return (
       <div className='max-h-screen relative flex flex-wrap gap-4 overflow-hidden'>
         {boxs.map((box,index)=> (
-          <div key={index} className='w-9 h-9 rounded-lg border border-blue-400'></div>
+          <div key={index} className='w-9 h-9 rounded-lg border border-blue-300'></div>
         ))}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.7)_40%,black_90%)] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.7)_60%,black_90%)] pointer-events-none"></div>
       <div className="min-h-screen absolute w-full bg-[#0a0a0ab3] flex items-center justify-center px-4">
       <div className="bg-[#09090b] rounded-2xl shadow-[0_0_60px_20px_rgba(0,0,0,0.8)] w-full px-8 max-w-[420px] border border-white/10">
-        <div>
-          <Image src='/cow1.png' alt='logo' width={220} height={100} className='mx-auto'></Image>
+        <div className='py-6 flex justify-center items-center'>
+          <Logo/>
         </div>
 
         <form onSubmit={submitHandler} className="mt-8">

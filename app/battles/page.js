@@ -6,7 +6,8 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import { Calendar, ChevronRight, Clock, Crown, Loader2, Plus, Swords, Target, Trophy, Users } from "lucide-react";
 import { UserDataContext } from "@/context/UserContext";
-import UserProtectWrapper from "@/components/UserProtectWrapper";
+import HexLoader from "@/components/HexLoader";
+import AccessModal from "@/components/AccessModal";
 
 const CREATE_ROUTE = "/party";
 const PAGE_SIZE = 12;
@@ -202,33 +203,78 @@ const YourBattles = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [now, setNow] = useState(() => Date.now());
+  const [progress, setProgress] = useState(0);
+  const [showLoader, setShowLoader] = useState(true);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
 
   const load = useCallback(
-    async (pageNumber, replace) => {
-      try {
-        replace ? setLoading(true) : setLoadingMore(true);
-        setError(null);
-        const { data } = await axios.get("/api/playground/history", {
-          params: { status: filter, page: pageNumber, limit: PAGE_SIZE},
-        }, {withCredentials: true});
-        setItems((prev) => (replace ? data.playgrounds : [...prev, ...data.playgrounds]));
-        setStats(data.stats);
-        setPage(pageNumber);
-        setHasMore(data.hasMore);
-      } catch (err) {
-        console.error("Error fetching playgrounds:", err);
-        setError(err.response?.data?.message || "Failed to fetch playgrounds. Please try again.");
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
+  async (pageNumber, replace) => {
+    try {
+      if (replace) {
+        setLoading(true);
+        setShowLoader(true);
+        setProgress(0);
+      } else {
+        setLoadingMore(true);
       }
-    },
-    [filter, user?._id]
+
+      setError(null);
+
+      const { data } = await axios.get("/api/playground/history", {
+        params: {
+          status: filter,
+          page: pageNumber,
+          limit: PAGE_SIZE,
+        },
+        withCredentials: true,
+
+        // Track API response download progress
+        onDownloadProgress: (event) => {
+          if (replace && event.total) {
+            const percent = Math.round(
+              (event.loaded / event.total) * 100
+            );
+
+            setProgress(Math.min(percent, 95));
+          }
+        },
+      });
+
+      setItems((prev) =>
+        replace
+          ? data.playgrounds
+          : [...prev, ...data.playgrounds]
+      );
+
+      setStats(data.stats);
+      setPage(pageNumber);
+      setHasMore(data.hasMore);
+
+      if (replace) {
+        setProgress(100);
+      }
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 401 || status === 403) {
+        setIsUnauthorized(true);
+      } else {
+        console.error("Error fetching playgrounds:", err);
+        setError(
+          err.response?.data?.message ||
+            "Failed to fetch playgrounds. Please try again."
+        );
+      }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  },
+  [filter]
   );
 
   useEffect(() => {
-    if (user?._id) load(1, true);
-  }, [user?._id, load]);
+    load(1, true);
+  }, [load]);
 
   // keeps the "x min left" text of live games fresh
   useEffect(() => {
@@ -238,139 +284,152 @@ const YourBattles = () => {
 
   const hasGames = (stats?.played ?? 0) + (stats?.inProgress ?? 0) > 0 || items.length > 0;
 
+  if(isUnauthorized){
+    return (
+      <AccessModal/>
+    )
+  }
+
   return (
-    <UserProtectWrapper>
-      <div className="relative min-h-screen overflow-hidden bg-[#0a0a0a] px-4 py-8 text-gray-100 md:px-8">
-        {/* soft background glow, same as the create-lobby page */}
-        <div className="pointer-events-none absolute left-0 top-0 h-96 w-96 rounded-full bg-blue-900/10 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 rounded-full bg-gray-800/10 blur-3xl" />
+    <>
+      {showLoader && (
+        <HexLoader
+          isLoading={loading}
+          progress={progress}
+          onFinish={() => setShowLoader(false)}
+        />
+      )}
+        <div className="relative min-h-screen overflow-hidden bg-[#0a0a0a] px-4 py-8 text-gray-100 md:px-8 mt-16">
+          {/* soft background glow, same as the create-lobby page */}
+          <div className="pointer-events-none absolute left-0 top-0 h-96 w-96 rounded-full bg-blue-900/10 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 rounded-full bg-gray-800/10 blur-3xl" />
 
-        <div className="relative z-10 mx-auto max-w-6xl">
-          {/* header */}
-          <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <Swords className="h-9 w-9 text-blue-300" />
-                <h1 className="bg-gradient-to-r from-blue-400 via-blue-300 to-blue-300 bg-clip-text text-3xl font-bold text-transparent md:text-5xl">
-                  YOUR BATTLES
-                </h1>
-              </div>
-              <p className="mt-2 text-gray-400">
-                Welcome back, <span className="font-semibold text-white">{user?.username || user?.email}</span>. Here is every battle you have played.
-              </p>
-            </div>
-            <button
-              onClick={() => router.push(CREATE_ROUTE)}
-              className="flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-gray-200"
-            >
-              <Plus className="h-4 w-4" />
-              New Battle
-            </button>
-          </div>
-
-          {/* career stats */}
-          {stats && hasGames && (
-            <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-              <StatCard icon={Swords} label="Games" value={stats.played} />
-              <StatCard icon={Trophy} label="Wins" value={stats.wins} accent="text-amber-400" />
-              <StatCard icon={Target} label="Win rate" value={`${stats.winRate}%`} accent="text-emerald-400" />
-              <StatCard icon={Crown} label="Best rank" value={stats.bestRank ? `#${stats.bestRank}` : "—"} />
-              <StatCard icon={Trophy} label="Points" value={stats.totalScore} accent="text-blue-300" />
-              <StatCard icon={Target} label="Solved" value={stats.solved} />
-            </div>
-          )}
-
-          {/* filters */}
-          <div className="mb-6 flex flex-wrap items-center gap-2" role="group" aria-label="Filter playgrounds">
-            {FILTERS.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setFilter(f.id)}
-                aria-pressed={filter === f.id}
-                className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
-                  filter === f.id
-                    ? "border-white bg-white font-semibold text-black"
-                    : "border-white/10 text-gray-400 hover:border-white/40 hover:text-white"
-                }`}
-              >
-                {f.label}
-                {f.id === "inprogress" && stats?.inProgress > 0 && (
-                  <span className="ml-2 rounded-full bg-emerald-500/20 px-1.5 text-xs text-emerald-400">{stats.inProgress}</span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* error */}
-          {error && (
-            <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-red-500/30 bg-red-500/10 p-5">
+          <div className="relative z-10 mx-auto max-w-6xl">
+            {/* header */}
+            <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h3 className="font-semibold text-red-300">Couldn&apos;t load your battles</h3>
-                <p className="text-sm text-red-400">{error}</p>
+                <div className="flex items-center gap-3">
+                  <Swords className="h-9 w-9 text-blue-300" />
+                  <h1 className="bg-gradient-to-r from-blue-400 via-blue-300 to-blue-300 bg-clip-text text-3xl font-bold text-transparent md:text-5xl">
+                    YOUR BATTLES
+                  </h1>
+                </div>
+                <p className="mt-2 text-gray-400">
+                  Welcome back, <span className="font-semibold text-white">{user?.username || user?.email}</span>. Here is every battle you have played.
+                </p>
               </div>
               <button
-                onClick={() => load(1, true)}
-                className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 transition-colors hover:bg-red-500 hover:text-white"
+                onClick={() => router.push(CREATE_ROUTE)}
+                className="flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-gray-200"
               >
-                Try again
+                <Plus className="h-4 w-4" />
+                New Battle
               </button>
             </div>
-          )}
 
-          {/* grid */}
-          {loading ? (
-            <SkeletonGrid />
-          ) : items.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {items.map((item) => (
-                  <PlaygroundCard key={item.id} item={item} now={now} />
-                ))}
+            {/* career stats */}
+            {stats && hasGames && (
+              <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+                <StatCard icon={Swords} label="Games" value={stats.played} />
+                <StatCard icon={Trophy} label="Wins" value={stats.wins} accent="text-amber-400" />
+                <StatCard icon={Target} label="Win rate" value={`${stats.winRate}%`} accent="text-emerald-400" />
+                <StatCard icon={Crown} label="Best rank" value={stats.bestRank ? `#${stats.bestRank}` : "—"} />
+                <StatCard icon={Trophy} label="Points" value={stats.totalScore} accent="text-blue-300" />
+                <StatCard icon={Target} label="Solved" value={stats.solved} />
               </div>
+            )}
 
-              {hasMore && (
-                <div className="mt-8 text-center">
-                  <button
-                    onClick={() => load(page + 1, false)}
-                    disabled={loadingMore}
-                    className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-6 py-2.5 text-gray-300 transition-colors hover:bg-white hover:text-black disabled:opacity-50"
-                  >
-                    {loadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {loadingMore ? "Loading…" : "Load more"}
-                  </button>
+            {/* filters */}
+            <div className="mb-6 flex flex-wrap items-center gap-2" role="group" aria-label="Filter playgrounds">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setFilter(f.id)}
+                  aria-pressed={filter === f.id}
+                  className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
+                    filter === f.id
+                      ? "border-white bg-white font-semibold text-black"
+                      : "border-white/10 text-gray-400 hover:border-white/40 hover:text-white"
+                  }`}
+                >
+                  {f.label}
+                  {f.id === "inprogress" && stats?.inProgress > 0 && (
+                    <span className="ml-2 rounded-full bg-emerald-500/20 px-1.5 text-xs text-emerald-400">{stats.inProgress}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* error */}
+            {error && (
+              <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-red-500/30 bg-red-500/10 p-5">
+                <div>
+                  <h3 className="font-semibold text-red-300">Couldn&apos;t load your battles</h3>
+                  <p className="text-sm text-red-400">{error}</p>
                 </div>
-              )}
-            </>
-          ) : (
-            !error && (
-              <div className="rounded-xl border border-white/10 bg-[#0a0a0a] px-6 py-14 text-center">
-                <Swords className="mx-auto mb-4 h-12 w-12 text-gray-600" />
-                <h3 className="mb-2 text-2xl font-semibold text-white">
-                  {filter === "all" ? "No playgrounds yet" : "Nothing here"}
-                </h3>
-                <p className="mx-auto mb-6 max-w-md text-gray-500">
-                  {filter === "all"
-                    ? "Create a playground, invite your friends and see who solves the most problems."
-                    : "No playgrounds match this filter."}
-                </p>
-                {filter === "all" ? (
-                  <button
-                    onClick={() => router.push(CREATE_ROUTE)}
-                    className="rounded-lg bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-gray-200"
-                  >
-                    Create your first battle
-                  </button>
-                ) : (
-                  <button onClick={() => setFilter("all")} className="text-blue-400 hover:underline">
-                    Show all
-                  </button>
-                )}
+                <button
+                  onClick={() => load(1, true)}
+                  className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 transition-colors hover:bg-red-500 hover:text-white"
+                >
+                  Try again
+                </button>
               </div>
-            )
-          )}
+            )}
+
+            {/* grid */}
+            {loading ? (
+              <SkeletonGrid />
+            ) : items.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {items.map((item) => (
+                    <PlaygroundCard key={item.id} item={item} now={now} />
+                  ))}
+                </div>
+
+                {hasMore && (
+                  <div className="mt-8 text-center">
+                    <button
+                      onClick={() => load(page + 1, false)}
+                      disabled={loadingMore}
+                      className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-6 py-2.5 text-gray-300 transition-colors hover:bg-white hover:text-black disabled:opacity-50"
+                    >
+                      {loadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {loadingMore ? "Loading…" : "Load more"}
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              !error && (
+                <div className="rounded-xl border border-white/10 bg-[#0a0a0a] px-6 py-14 text-center">
+                  <Swords className="mx-auto mb-4 h-12 w-12 text-gray-600" />
+                  <h3 className="mb-2 text-2xl font-semibold text-white">
+                    {filter === "all" ? "No playgrounds yet" : "Nothing here"}
+                  </h3>
+                  <p className="mx-auto mb-6 max-w-md text-gray-500">
+                    {filter === "all"
+                      ? "Create a playground, invite your friends and see who solves the most problems."
+                      : "No playgrounds match this filter."}
+                  </p>
+                  {filter === "all" ? (
+                    <button
+                      onClick={() => router.push(CREATE_ROUTE)}
+                      className="rounded-lg bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-gray-200"
+                    >
+                      Create your first battle
+                    </button>
+                  ) : (
+                    <button onClick={() => setFilter("all")} className="text-blue-400 hover:underline">
+                      Show all
+                    </button>
+                  )}
+                </div>
+              )
+            )}
+          </div>
         </div>
-      </div>
-    </UserProtectWrapper>
+    </>
   );
 };
 

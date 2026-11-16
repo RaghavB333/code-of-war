@@ -7,6 +7,7 @@ import { Check, Clock, Copy, Crown, LogOut, Swords, Trophy, UserPlus, UserX } fr
 import { UserDataContext } from "@/context/UserContext";
 import { LobbyDataContext } from "@/context/LobbyContext";
 import UserProtectWrapper from "@/components/UserProtectWrapper";
+import PageLoader from "@/components/PageLoader";
 
 // Any of these means "something changed" -> just ask the server for the fresh state.
 const REFRESH_EVENTS = ["lobby:updated", "game:started", "leaderboard:update", "game:ended"];
@@ -63,12 +64,29 @@ const Party = ({ params }) => {
   const [now, setNow] = useState(() => Date.now());
   const clockOffset = useRef(0); // serverTime - clientTime, so the countdown follows the server
 
+  // Clash Loader & Start Countdown States
+  const [showClashLoader, setShowClashLoader] = useState(false);
+  const [isStartingGame, setIsStartingGame] = useState(false);
+  const [startCountdown, setStartCountdown] = useState(null); // 3 -> 2 -> 1 -> null
+  const prevStatusRef = useRef(null);
+
   const fetchLobby = useCallback(async () => {
     try {
       const { data } = await axios.get(`/api/playground/${id}`);
       clockOffset.current = new Date(data.serverNow).getTime() - Date.now();
       setLobby(data);
       setError("");
+
+      // Status transition check (e.g. for players in waiting room when game starts)
+      if (prevStatusRef.current === null) {
+        // Initial load: do NOT trigger clash loader if page was refreshed while already active
+        prevStatusRef.current = data.status;
+      } else if (prevStatusRef.current === "waiting" && data.status === "active") {
+        setShowClashLoader(true);
+        prevStatusRef.current = "active";
+      } else {
+        prevStatusRef.current = data.status;
+      }
     } catch (err) {
       if (err.response?.status === 404) {
         setLobby(null); // removed from the party / it no longer exists
@@ -183,7 +201,36 @@ const Party = ({ params }) => {
   const invite = (friendId) =>
     run(`invite:${friendId}`, () => axios.post(`/api/playground/${id}/invite`, { userIds: [friendId] }));
 
-  const start = () => run("start", () => axios.post(`/api/playground/${id}/start`));
+  // 3-2-1 Countdown Trigger for Host
+  const handleStartWarClick = () => {
+    if (busy !== "" || startCountdown !== null) return;
+    setStartCountdown(3);
+  };
+
+  // Manage 3 -> 2 -> 1 Countdown Timer
+  useEffect(() => {
+    if (startCountdown === null) return;
+
+    if (startCountdown > 0) {
+      const timer = setTimeout(() => {
+        setStartCountdown((prev) => (prev > 1 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+
+    if (startCountdown === 0) {
+      // Countdown finished -> launch clash animation and call server start API!
+      setStartCountdown(null);
+      setShowClashLoader(true);
+      setIsStartingGame(true);
+
+      run("start", () => axios.post(`/api/playground/${id}/start`))
+        .then(() => fetchLobby())
+        .finally(() => {
+          setIsStartingGame(false);
+        });
+    }
+  }, [startCountdown, id, fetchLobby]);
 
   const kick = (member) => {
     if (!window.confirm(`Remove ${member.username} from the party?`)) return;
@@ -268,6 +315,19 @@ const Party = ({ params }) => {
 
   return (
     <UserProtectWrapper>
+      {/* 
+        Clash of Code Cinematic PageLoader:
+        - Shows when host clicks start after 3-2-1 countdown, or when socket fires active
+        - Stays until BOTH the minimum animation completes AND active problems data is ready
+        - Does NOT show on page refresh when party is already active!
+      */}
+      {showClashLoader && (
+        <PageLoader
+          isLoading={isStartingGame || lobby?.status === "waiting" || !problems}
+          onFinish={() => setShowClashLoader(false)}
+        />
+      )}
+
       <div className="min-h-screen bg-[#0a0a0a] p-4 text-gray-100 md:p-8">
         <div className="mx-auto max-w-6xl space-y-6">
           {/* header */}
@@ -432,14 +492,33 @@ const Party = ({ params }) => {
 
               {isOwner && (
                 <div className="text-center">
-                  <button
-                    onClick={start}
-                    disabled={!canStart || busy !== ""}
-                    className="rounded-xl bg-gradient-to-r from-blue-500 to-blue-700 px-12 py-4 text-xl font-bold text-white shadow-2xl shadow-blue-900/50 transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
-                  >
-                    {busy === "start" ? "Starting…" : "Start War"}
-                  </button>
-                  {!canStart && (
+                  {/* Countdown Timer replacing the button on click */}
+                  {startCountdown !== null ? (
+                    <div className="inline-flex flex-col items-center justify-center">
+                      <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-blue-500/60 bg-blue-950/70 shadow-[0_0_35px_rgba(59,130,246,0.6)] backdrop-blur-md">
+                        <div className="absolute inset-0 animate-ping rounded-2xl border border-blue-400/40 opacity-40" />
+                        <span
+                          key={startCountdown}
+                          className="font-mono text-4xl font-black text-blue-400 drop-shadow-[0_0_12px_rgba(59,130,246,0.9)] animate-pulse"
+                        >
+                          {startCountdown}
+                        </span>
+                      </div>
+                      <p className="mt-3 font-mono text-xs uppercase tracking-[0.3em] text-blue-300 animate-pulse">
+                        War Begins in...
+                      </p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleStartWarClick}
+                      disabled={!canStart || busy !== ""}
+                      className="rounded-xl bg-gradient-to-r from-blue-500 to-blue-700 px-12 py-4 text-xl font-bold text-white shadow-2xl shadow-blue-900/50 transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                    >
+                      {busy === "start" ? "Starting…" : "Start War"}
+                    </button>
+                  )}
+
+                  {!canStart && startCountdown === null && (
                     <p className="mt-3 text-sm text-gray-500">
                       Waiting for at least {lobby.minPlayersToStart} players to join.
                     </p>

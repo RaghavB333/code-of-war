@@ -20,7 +20,7 @@ export async function GET(req) {
         );
     }
 
-      const cookieHeader = req.headers.get("cookie");
+    const cookieHeader = req.headers.get("cookie");
       const token = cookieHeader
     ?.split("; ")
     .find((c) => c.startsWith("token="))
@@ -29,7 +29,7 @@ export async function GET(req) {
     {
         return new Response(
             JSON.stringify({ message: 'Unauthorized'}),
-            { status: 400 }
+            { status: 401 }
           );
     }
 
@@ -39,7 +39,7 @@ export async function GET(req) {
     {
         return new Response(
             JSON.stringify({ message: 'Unauthorized'}),
-            { status: 400 }
+            { status: 401 }
           );
     }
     
@@ -90,7 +90,7 @@ export async function GET(req) {
 
         return new Response(
             JSON.stringify({ message: 'Unauthorized'}),
-            { status: 400 }
+            { status: 401 }
           );
 
 
