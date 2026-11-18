@@ -12,17 +12,16 @@ const LobbyContext = ({ children }) => {
   const [currentLobby, setCurrentLobby] = useState(null);
   const [lobbyMembers, setLobbyMembers] = useState([]);
   const [lobbyStatus, setLobbyStatus] = useState('waiting');
-
+  const SOCKET_SERVER= process.env.NEXT_PUBLIC_BACKEND_SOCKET_SERVER || 'http://localhost:4000'
   const {user} = useContext(UserDataContext);
 
   useEffect(() => {
     if(user && user.email !== '' && user.email !== null){
-    const newSocket = io("http://localhost:4000");
+    const newSocket = io(SOCKET_SERVER);
     setSocket(newSocket);
 
     // Setup event listeners
     newSocket.on('lobby-created', (data) => {
-      console.log('Lobby created:', data);
       setCurrentLobby(data.lobbyId);
     });
 
@@ -50,7 +49,6 @@ const LobbyContext = ({ children }) => {
       if (socket != null) {
         const registerUser = () => {
           if (user && user.email) {
-            console.log("Registering user:", user.email);
             socket.emit("user_connected", {userId: user._id});
             socket.emit("register-user", { email: user.email });
           }

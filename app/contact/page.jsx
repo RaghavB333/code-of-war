@@ -77,7 +77,8 @@ export default function ContactPage() {
             {/* Tanpreet */}
             <div className="space-y-4 flex flex-col items-center">
               <img
-                src="https://avatars.githubusercontent.com/u/150704059?v=4" // Add your image URL here
+                src="/images/tanpreetimage.jpeg"
+                // src="https://avatars.githubusercontent.com/u/150704059?v=4"
                 alt="Tanpreet"
                 className="w-44 h-44 rounded-full object-cover border-4 border-gray-100"
               />
@@ -116,7 +117,7 @@ export default function ContactPage() {
             {/* Tanpreet */}
             <div className="space-y-4 flex flex-col items-center">
               <img
-                src="https://avatars.githubusercontent.com/u/150704059?v=4" // Add your image URL here
+                 src="/images/tanpreetimage.jpeg"
                 alt="Tanpreet"
                 className="w-44 h-44 rounded-full object-cover border-4 border-gray-100"
               />

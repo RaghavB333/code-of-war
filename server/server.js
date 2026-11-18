@@ -12,6 +12,7 @@ require("dotenv").config({ path: "../.env.local" });
 
 const INTERNAL_SECRET = process.env.SOCKET_INTERNAL_SECRET;
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME || "token";
+const SERVER_URL = process.env.SOCKET_BACKEND_URL || 'http://localhost:'
 
 if (!INTERNAL_SECRET) throw new Error("SOCKET_INTERNAL_SECRET is required");
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is required");
@@ -19,14 +20,8 @@ if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is required");
 const app = express();
 const server = http.createServer(app);
 
-
-app.use((req, res, next) => {
-  console.log("Incoming Origin Header:", req.headers.origin);
-  next();
-});
-
 app.use(cors({
-  origin: "*",
+  origin: process.env.FRONTEND_SERVER,
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: false 
 }));
@@ -34,7 +29,7 @@ app.use(cors({
 // Socket.IO CORS
 const io = new Server(server, {
   cors: {
-    origin: "*", 
+    origin: process.env.FRONTEND_SERVER, 
     methods: ["GET", "POST"]
   },
   connectionStateRecovery: {
@@ -79,6 +74,12 @@ io.use((socket, next) => {
   next();
 });
 
+
+app.get("/health", (res)=> {
+  console.log("Server is running");
+  res.send("server is running");
+})
+
 /* ----------------- Next.js -> socket: "emit this event to these rooms" ----------------- */
 
 
@@ -115,15 +116,11 @@ app.post("/internal/online", express.json({ limit: "64kb" }), (req, res) => {
 
 
 io.on('connection', async (socket) => {
-  const { userId } = socket.data;
-  console.log('A user connected:', userId, socket.id);
-
   // personal room for lobby invites (all tabs of this user)
   if (socket.data.userId) socket.join(`user:${socket.data.userId}`);
 
   // When user connects, store their ID and socketId
   socket.on("user_connected", ({userId}) => {
-    console.log("user id : ", userId);
     const sockets = onlineUsers.get(userId) ?? new Set();
     sockets.add(socket.id);
     onlineUsers.set(userId, sockets);
@@ -149,8 +146,6 @@ io.on('connection', async (socket) => {
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
-
-      console.log(`Socket ID for ${email} is now ${socket.id}`);
     } catch (err) {
       console.error("Failed to register user socket:", err);
     }
@@ -246,7 +241,6 @@ io.on('connection', async (socket) => {
   })
 
   socket.on('disconnect', async () => {
-    console.log('A user disconnected:', socket.id);
       for (const [userId, sockets] of onlineUsers.entries()) {
       if (sockets.delete(socket.id)) {
         if (sockets.size === 0) onlineUsers.delete(userId); // last tab closed -> offline
@@ -260,5 +254,5 @@ io.on('connection', async (socket) => {
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on ${SERVER_URL}${PORT}`);
 });

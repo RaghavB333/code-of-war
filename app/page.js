@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState, useContext, useRef } from "react";
-import { UserDataContext } from "@/context/UserContext";
-import { LobbyDataContext } from "@/context/LobbyContext";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
 import {
   motion,
   useScroll,
@@ -15,7 +12,6 @@ import {
   useMotionTemplate,
   useReducedMotion,
 } from "framer-motion";
-import axios from "axios";
 import ExecutionFlowGSAP from "@/components/ExecutionFlowGSAP";
 import MultiplayerEarthSection from "@/components/multiplayer/MultiplayerEarthSection";
 import Protocols from "@/components/Protocols";
@@ -92,22 +88,6 @@ function Item({ dir = "up", className = "", children, as = "div", ...rest }) {
     <M custom={reduce ? {} : offsets[dir]} variants={itemVariants} className={className} {...rest}>
       {children}
     </M>
-  );
-}
-
-function MaskLine({ children, delay = 0, className = "" }) {
-  const reduce = useReducedMotion();
-  return (
-    <span className="block overflow-hidden pb-1">
-      <motion.span
-        initial={{ y: reduce ? 0 : "110%", opacity: reduce ? 0 : 1 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.9, ease, delay }}
-        className={`block ${className}`}
-      >
-        {children}
-      </motion.span>
-    </span>
   );
 }
 
@@ -433,13 +413,6 @@ function PillarCard({ p, i, pinned }) {
 /* ================================================================== */
 
 export default function Home() {
-  const [mapOpen, setMapOpen] = useState(false);
-
-  const socketid = useRef(null);
-  const { user } = useContext(UserDataContext);
-  const { socket } = useContext(LobbyDataContext);
-  const router = useRouter();
-
   const reduce = useReducedMotion();
 
   /* ---- scroll-linked effects ---- */
@@ -450,50 +423,6 @@ export default function Home() {
   const { scrollYProgress: heroP } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const heroY = useTransform(heroP, [0, 1], [0, reduce ? 0 : 90]);
   const heroOpacity = useTransform(heroP, [0, 0.9], [1, 0]);
-
-  useEffect(() => {
-    document.body.style.overflow = mapOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [mapOpen]);
-
-  const storesocketid = async () => {
-    const email = user.email;
-    const data = { socketid: socketid.current, email: email };
-    const response = await axios.post("/api/storesocketid", data);
-    console.log(response.data);
-  };
-
-  useEffect(() => {
-    if (user && user.email && socketid.current != null) {
-      storesocketid();
-    }
-  }, [user && user.email]);
-
-  useEffect(() => {
-    if (socket != null) {
-      const registerUser = () => {
-        if (user && user.email) {
-          socket.emit("register-user", { email: user.email });
-        }
-      };
-
-      socket.on("connect", () => {
-        socketid.current = socket.id;
-        registerUser();
-      });
-
-      socket.on("reconnect", () => {
-        registerUser();
-      });
-
-      return () => {
-        socket.off("connect");
-        socket.off("reconnect");
-      };
-    }
-  }, [user, socket]);
 
 
   const editorFeatures = [
@@ -551,151 +480,139 @@ const CheckIcon = () => (
       />
       <main>
         {/* HERO */}
-
-      <section
-          ref={heroRef}
-          data-realm="hero"
-          className="relative min-h-screen overflow-hidden flex flex-col justify-center"
-        >
-          {/* 0.0s – background glow blooms from the centre */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 2.2, ease }}
-            className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_25%,color-mix(in_srgb,#3182ce_20%,transparent),transparent_60%)]"
-          />
-
-          {/* 0.2s – a soft light beam sweeps across the hero once */}
-          {/* {!reduce && (
+        <section
+            ref={heroRef}
+            data-realm="hero"
+            className="relative min-h-screen overflow-hidden flex flex-col justify-center"
+          >
+            {/* 0.0s – background glow blooms from the centre */}
             <motion.div
-              initial={{ x: "-30vw", opacity: 0 }}
-              animate={{ x: "130vw", opacity: [0, 1, 1, 0] }}
-              transition={{ duration: 2.2, ease: "easeInOut", delay: 0.2 }}
-              className="absolute top-0 bottom-0 left-0 w-[28vw] pointer-events-none bg-gradient-to-r from-transparent via-blue-400/10 to-transparent skew-x-[-18deg]"
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 2.2, ease }}
+              className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_25%,color-mix(in_srgb,#3182ce_20%,transparent),transparent_60%)]"
             />
-          )} */}
 
-          {/* 0.2s – rune ring spins in and fades up */}
-          <motion.div
-            initial={{ opacity: 0, scale: reduce ? 1 : 0.7, rotate: reduce ? 0 : -40 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{ duration: 2.6, ease, delay: 0.2 }}
-            className="absolute inset-0 pointer-events-none"
-          >
-            <RuneRing />
-          </motion.div>
-
-          {/* 0.5s – embers fade in */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 2.5, delay: 0.5 }}
-            className="absolute inset-0 pointer-events-none"
-          >
-            <Embers color={"#3182ce"} count={300} />
-          </motion.div>
-
-          <motion.div
-            style={{ y: heroY, opacity: heroOpacity }}
-            className="relative flex flex-col items-center justify-center text-center px-5 py-20 min-h-screen"
-          >
-            {/* 0.5s → 2.4s – headline, word by word, rising out of a mask with a blur-to-sharp focus */}
-            <h1 className="mt-6 text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-extrabold leading-tight tracking-tight">
-              {heroLines.map((line, li) => (
-                <span
-                  key={li}
-                  className={`block ${li === 1 ? "text-blue-400" : ""}`}
-                >
-                  {line.map((word, wi) => (
-                    <span
-                      key={wi}
-                      className={`inline-block overflow-hidden align-bottom pb-1 ${
-                        wi < line.length - 1 ? "mr-[0.25em]" : ""
-                      }`}
-                    >
-                      <motion.span
-                        initial={{
-                          y: reduce ? 0 : "115%",
-                          opacity: 0,
-                          // filter: "blur(10px)",
-                        }}
-                        animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-                        transition={{
-                          duration: 1.1,
-                          ease,
-                          delay: 0.5 + li * 0.5 + wi * 0.12,
-                        }}
-                        className="inline-block"
-                      >
-                        {word}
-                      </motion.span>
-                    </span>
-                  ))}
-                </span>
-              ))}
-            </h1>
-
-            {/* 2.0s → 3.3s – paragraph, then buttons pop in */}
-            <Stagger
-              onLoad
-              delay={2}
-              stagger={0.3}
-              className="flex flex-col items-center"
+            {/* 0.2s – rune ring spins in and fades up */}
+            <motion.div
+              initial={{ opacity: 0, scale: reduce ? 1 : 0.7, rotate: reduce ? 0 : -40 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ duration: 2.6, ease, delay: 0.2 }}
+              className="absolute inset-0 pointer-events-none"
             >
-              <Item
-                as="p"
-                className="mt-6 max-w-2xl text-sm md:text-lg leading-relaxed text-gray-400"
-              >
-                Sharpen your coding skills, challenge your friends
-                in real-time battles, and rise through the ranks.
-                Your code is your weapon. Victory is your destiny.
-              </Item>
+              <RuneRing />
+            </motion.div>
 
-              <Item dir="scale" className="mt-9 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Link
-                    href="/party"
-                    className="block bg-blue-500 hover:bg-blue-400 text-white font-semibold py-3.5 px-9 rounded-lg transition-all shadow-lg shadow-blue-500/20"
-                  >
-                    Enter the Arena →
-                  </Link>
-                </motion.div>
-
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Link
-                    href="/problems"
-                    className="block bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold py-3.5 px-9 rounded-lg transition-all"
-                  >
-                    Explore Problems
-                  </Link>
-                </motion.div>
-              </Item>
-            </Stagger>
-
-            {/* 3.6s – scroll indicator arrives last */}
+            {/* 0.5s – embers fade in */}
             <motion.div
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1, y: [0, 8, 0] }}
-              transition={{
-                opacity: { delay: 3.6, duration: 0.8 },
-                y: { duration: 1.8, repeat: Infinity, ease: "easeInOut", delay: 3.6 },
-              }}
-              className="absolute bottom-7 flex flex-col items-center gap-2 text-gray-500"
+              animate={{ opacity: 1 }}
+              transition={{ duration: 2.5, delay: 0.5 }}
+              className="absolute inset-0 pointer-events-none"
             >
-              <span className="text-[10px] tracking-[0.3em] uppercase">
-                Scroll to explore
-              </span>
-              <span className="text-xl text-blue-400">↓</span>
+              <Embers color={"#3182ce"} count={300} />
             </motion.div>
-          </motion.div>
-        </section>
 
+            <motion.div
+              style={{ y: heroY, opacity: heroOpacity }}
+              className="relative flex flex-col items-center justify-center text-center px-5 py-20 min-h-screen"
+            >
+              {/* 0.5s → 2.4s – headline, word by word, rising out of a mask with a blur-to-sharp focus */}
+              <h1 className="mt-6 text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-extrabold leading-tight tracking-tight">
+                {heroLines.map((line, li) => (
+                  <span
+                    key={li}
+                    className={`block ${li === 1 ? "text-blue-400" : ""}`}
+                  >
+                    {line.map((word, wi) => (
+                      <span
+                        key={wi}
+                        className={`inline-block overflow-hidden align-bottom pb-1 ${
+                          wi < line.length - 1 ? "mr-[0.25em]" : ""
+                        }`}
+                      >
+                        <motion.span
+                          initial={{
+                            y: reduce ? 0 : "115%",
+                            opacity: 0,
+                            // filter: "blur(10px)",
+                          }}
+                          animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+                          transition={{
+                            duration: 1.1,
+                            ease,
+                            delay: 0.5 + li * 0.5 + wi * 0.12,
+                          }}
+                          className="inline-block"
+                        >
+                          {word}
+                        </motion.span>
+                      </span>
+                    ))}
+                  </span>
+                ))}
+              </h1>
+
+              {/* 2.0s → 3.3s – paragraph, then buttons pop in */}
+              <Stagger
+                onLoad
+                delay={2}
+                stagger={0.3}
+                className="flex flex-col items-center"
+              >
+                <Item
+                  as="p"
+                  className="mt-6 max-w-2xl text-sm md:text-lg leading-relaxed text-gray-400"
+                >
+                  Sharpen your coding skills, challenge your friends
+                  in real-time battles, and rise through the ranks.
+                  Your code is your weapon. Victory is your destiny.
+                </Item>
+
+                <Item dir="scale" className="mt-9 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Link
+                      href="/party"
+                      className="block bg-blue-500 hover:bg-blue-400 text-white font-semibold py-3.5 px-9 rounded-lg transition-all shadow-lg shadow-blue-500/20"
+                    >
+                      Enter the Arena →
+                    </Link>
+                  </motion.div>
+
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Link
+                      href="/problems"
+                      className="block bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold py-3.5 px-9 rounded-lg transition-all"
+                    >
+                      Explore Problems
+                    </Link>
+                  </motion.div>
+                </Item>
+              </Stagger>
+
+              {/* 3.6s – scroll indicator arrives last */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, y: [0, 8, 0] }}
+                transition={{
+                  opacity: { delay: 3.6, duration: 0.8 },
+                  y: { duration: 1.8, repeat: Infinity, ease: "easeInOut", delay: 3.6 },
+                }}
+                className="absolute bottom-7 flex flex-col items-center gap-2 text-gray-500"
+              >
+                <span className="text-[10px] tracking-[0.3em] uppercase">
+                  Scroll to explore
+                </span>
+                <span className="text-xl text-blue-400">↓</span>
+              </motion.div>
+            </motion.div>
+        </section>
 
         {/* CODE EDITOR */}     
         <section
@@ -826,7 +743,7 @@ const CheckIcon = () => (
           className="px-4 md:px-8 max-w-8xl mx-auto mt-24 md:mt-20"
         >
           <SectionLabel n="08" name="Contact Us" className="max-w-7xl mx-auto" />
-        <ContactSection/>
+          <ContactSection/>
         </section>
 
 
@@ -851,7 +768,7 @@ const CheckIcon = () => (
                 your friends in real-time coding battles.
               </p>
 
-              <a
+              <Link
                 href="/party"
                 className={`${mono} group mt-7 inline-flex items-center gap-3 text-[10px] tracking-[0.15em] uppercase text-blue-400 hover:text-blue-300 transition-colors`}
               >
@@ -859,7 +776,7 @@ const CheckIcon = () => (
                 <span className="transition-transform duration-300 group-hover:translate-x-1">
                   →
                 </span>
-              </a>
+              </Link>
             </Reveal>
 
             {/* Explore */}
@@ -873,13 +790,13 @@ const CheckIcon = () => (
                   { label: "Home", href: "/" },
                   { label: "Multiplayer", href: "/party" },
                 ].map((item) => (
-                  <a
+                  <Link
                     key={item.label}
                     href={item.href}
                     className={`${mono} text-[11px] text-gray-500 hover:text-blue-400 transition-colors duration-300`}
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 ))}
               </div>
             </Reveal>
@@ -891,19 +808,19 @@ const CheckIcon = () => (
               </h3>
 
               <div className="flex flex-col items-start gap-4">
-                <a
+                <Link
                   href="/problems"
                   className={`${mono} text-[11px] text-gray-500 hover:text-blue-400 transition-colors duration-300`}
                 >
                   Problems
-                </a>
+                </Link>
 
-                <a
+                <Link
                   href="/contact"
                   className={`${mono} text-[11px] text-gray-500 hover:text-blue-400 transition-colors duration-300`}
                 >
                   Contact Us
-                </a>
+                </Link>
               </div>
             </Reveal>
 
